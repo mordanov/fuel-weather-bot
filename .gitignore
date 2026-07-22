@@ -1,0 +1,47 @@
+# Private / secrets
+.private/
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.venv/
+venv/
+env/
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build output (Python + Node)
+dist/
+build/
+
+# Node / frontend
+node_modules/
+.pnp
+.pnp.js
+*.local
+
+# Logs
+*.log
+logs/
+
+# Docker
+*.override.yml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
