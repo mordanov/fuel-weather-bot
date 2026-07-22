@@ -6,11 +6,10 @@ import os
 import unicodedata
 from math import radians, sin, cos, sqrt, atan2
 
-import ssl
-
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.ssl_ import create_urllib3_context
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 BASE_URL = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes"
 STATIONS_BY_PROVINCE_URL = BASE_URL + "/EstacionesTerrestres/FiltroProvincia/{province}"
@@ -22,18 +21,8 @@ REQUEST_HEADERS = {
     "Accept": "application/json",
 }
 
-
-class _LegacySSLAdapter(HTTPAdapter):
-    """Allow servers that close the connection after the TLS handshake (OP_LEGACY_SERVER_CONNECT)."""
-    def init_poolmanager(self, *args, **kwargs):
-        ctx = create_urllib3_context()
-        ctx.options |= ssl.OP_LEGACY_SERVER_CONNECT
-        kwargs["ssl_context"] = ctx
-        super().init_poolmanager(*args, **kwargs)
-
-
 _session = requests.Session()
-_session.mount("https://sedeaplicaciones.minetur.gob.es", _LegacySSLAdapter())
+_session.verify = False  # minetur.gob.es has a broken TLS handshake (UNEXPECTED_EOF)
 
 
 def _parse_number(value):
