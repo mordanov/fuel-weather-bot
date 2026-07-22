@@ -12,13 +12,33 @@ _MARINE_URL = "https://marine-api.open-meteo.com/v1/marine"
 _WIND_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
 _WMO_CODES = {
-    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
-    45: "Fog", 48: "Icy fog",
-    51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
-    61: "Light rain", 63: "Rain", 65: "Heavy rain",
-    71: "Light snow", 73: "Snow", 75: "Heavy snow",
-    80: "Light showers", 81: "Showers", 82: "Heavy showers",
-    95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Heavy thunderstorm with hail",
+    "en": {
+        0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+        45: "Fog", 48: "Icy fog",
+        51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
+        61: "Light rain", 63: "Rain", 65: "Heavy rain",
+        71: "Light snow", 73: "Snow", 75: "Heavy snow",
+        80: "Light showers", 81: "Showers", 82: "Heavy showers",
+        95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Heavy thunderstorm with hail",
+    },
+    "es": {
+        0: "Cielo despejado", 1: "Mayormente despejado", 2: "Parcialmente nublado", 3: "Nublado",
+        45: "Niebla", 48: "Niebla helada",
+        51: "Llovizna ligera", 53: "Llovizna", 55: "Llovizna intensa",
+        61: "Lluvia ligera", 63: "Lluvia", 65: "Lluvia intensa",
+        71: "Nieve ligera", 73: "Nieve", 75: "Nieve intensa",
+        80: "Chubascos ligeros", 81: "Chubascos", 82: "Chubascos fuertes",
+        95: "Tormenta", 96: "Tormenta con granizo", 99: "Tormenta fuerte con granizo",
+    },
+    "ru": {
+        0: "Ясно", 1: "Преимущественно ясно", 2: "Переменная облачность", 3: "Пасмурно",
+        45: "Туман", 48: "Ледяной туман",
+        51: "Морось слабая", 53: "Морось", 55: "Морось сильная",
+        61: "Дождь слабый", 63: "Дождь", 65: "Дождь сильный",
+        71: "Снег слабый", 73: "Снег", 75: "Снег сильный",
+        80: "Ливень слабый", 81: "Ливень", 82: "Ливень сильный",
+        95: "Гроза", 96: "Гроза с градом", 99: "Сильная гроза с градом",
+    },
 }
 
 
@@ -65,14 +85,17 @@ def fetch_weather(lat: float, lon: float) -> dict:
     }
 
 
-def format_weather_message(weather: dict, lat: float, lon: float) -> str:
+def format_weather_message(weather: dict, lat: float, lon: float, lang: str = "en") -> str:
+    from i18n import t
+
     def fmt_temp(val):
         return f"{val:.1f}°C" if val is not None else "n/a"
 
     def fmt_float(val, unit):
         return f"{val:.1f} {unit}" if val is not None else "n/a"
 
-    condition = _WMO_CODES.get(weather.get("weather_code"), "Unknown")
+    codes = _WMO_CODES.get(lang, _WMO_CODES["en"])
+    condition = codes.get(weather.get("weather_code"), "Unknown")
 
     wind_label = ""
     if weather["wind_speed"] is not None and weather["wind_direction"] is not None:
@@ -95,7 +118,7 @@ def format_weather_message(weather: dict, lat: float, lon: float) -> str:
         wave_label = "n/a"
 
     lines = [
-        f"🌤 Weather ({lat:.4f}, {lon:.4f})",
+        t(lang, "weather_header", lat=lat, lon=lon),
         "",
         f"☁️  {condition}",
         f"🌡  Air: {fmt_temp(weather['temperature'])} (feels like {fmt_temp(weather['feels_like'])})",

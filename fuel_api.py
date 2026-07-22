@@ -146,32 +146,62 @@ def find_nearest_station(stations, home_lat, home_lon):
     return best
 
 
-def format_message(summary: dict, nearest: dict = None, municipio_name: str = "", province_code: str = "29") -> str:
-    scope = municipio_name if municipio_name else f"province {province_code}"
-    lines = [f"⛽ Fuel prices — {scope} ({summary['date']})", ""]
+def _maps_link(station: dict) -> str:
+    """Return a Google Maps URL for the station — prefer coordinates, fall back to address query."""
+    if station.get("lat") and station.get("lon"):
+        return f"https://maps.google.com/?q={station['lat']},{station['lon']}"
+    query = f"{station.get('address', '')} {station.get('town', '')}".strip()
+    if query:
+        import urllib.parse
+        return f"https://maps.google.com/?q={urllib.parse.quote(query)}"
+    return ""
 
-    for label, info in summary["fuels"].items():
-        if info["avg"] is not None:
-            lines.append(f"{label} (avg): {info['avg']:.3f} €/L")
+
+def format_message(
+    summary: dict,
+    nearest: dict = None,
+    municipio_name: str = "",
+    province_code: str = "29",
+    lang: str = "en",
+) -> str:
+    from i18n import t
+
+    scope = municipio_name if municipio_name else f"province {province_code}"
+    lines = [t(lang, "fuel_header", scope=scope, date=summary["date"]), ""]
+
+    fuel_labels = {
+        "Gasoline 95": t(lang, "gasoline_95"),
+        "Diesel": t(lang, "diesel"),
+    }
+
+    for key, label in fuel_labels.items():
+        info = summary["fuels"].get(key, {})
+        if info.get("avg") is not None:
+            lines.append(t(lang, "fuel_avg", label=label, price=f"{info['avg']:.3f}"))
     lines.append("")
 
-    for label, info in summary["fuels"].items():
-        c = info["cheapest"]
+    for key, label in fuel_labels.items():
+        info = summary["fuels"].get(key, {})
+        c = info.get("cheapest")
         if c:
-            lines.append(f"Cheapest {label}: {c['price']:.3f} €/L — {c['name']}")
+            lines.append(t(lang, "cheapest", label=label, price=f"{c['price']:.3f}", name=c["name"]))
             if c["address"]:
-                lines.append(f"  {c['address']}, {c['town']}")
+                link = _maps_link(c)
+                addr = f"{c['address']}, {c['town']}"
+                lines.append(f"  {addr}" + (f"\n  {link}" if link else ""))
 
     if nearest:
         lines.append("")
-        lines.append(f"📍 Nearest station to you: {nearest['name']} ({nearest['distance_km']:.1f} km)")
+        lines.append(t(lang, "nearest_header", name=nearest["name"], dist=nearest["distance_km"]))
         if nearest["address"]:
-            lines.append(f"  {nearest['address']}, {nearest['town']}")
+            link = _maps_link(nearest)
+            addr = f"{nearest['address']}, {nearest['town']}"
+            lines.append(f"  {addr}" + (f"\n  {link}" if link else ""))
         if nearest["gasoline_95"] is not None:
-            lines.append(f"  Gasoline 95: {nearest['gasoline_95']:.3f} €/L")
+            lines.append(f"  {t(lang, 'gasoline_95')}: {nearest['gasoline_95']:.3f} €/L")
         if nearest["diesel"] is not None:
-            lines.append(f"  Diesel: {nearest['diesel']:.3f} €/L")
+            lines.append(f"  {t(lang, 'diesel')}: {nearest['diesel']:.3f} €/L")
 
     lines.append("")
-    lines.append(f"({summary['station_count']} stations reporting)")
+    lines.append(t(lang, "stations_reporting", n=summary["station_count"]))
     return "\n".join(lines)

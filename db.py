@@ -29,6 +29,9 @@ def init_schema():
                     municipio_name        TEXT NOT NULL DEFAULT '',
                     province_code         TEXT NOT NULL DEFAULT '29',
                     notifications_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                    send_hour             INT NOT NULL DEFAULT 7,
+                    send_minute           INT NOT NULL DEFAULT 0,
+                    language              TEXT NOT NULL DEFAULT 'en',
                     created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
@@ -36,6 +39,18 @@ def init_schema():
             cur.execute("""
                 ALTER TABLE users
                 ADD COLUMN IF NOT EXISTS notifications_enabled BOOLEAN NOT NULL DEFAULT TRUE
+            """)
+            cur.execute("""
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS send_hour INT NOT NULL DEFAULT 7
+            """)
+            cur.execute("""
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS send_minute INT NOT NULL DEFAULT 0
+            """)
+            cur.execute("""
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'
             """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS price_snapshots (
@@ -136,6 +151,26 @@ def get_snapshot_on_date(province_code: str, municipio_name: str, date) -> dict 
             """, (province_code, municipio_name, date))
             row = cur.fetchone()
             return dict(row) if row else None
+
+
+def update_user_send_time(chat_id: int, hour: int, minute: int):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE users SET send_hour = %s, send_minute = %s, updated_at = NOW()
+                WHERE chat_id = %s
+            """, (hour, minute, chat_id))
+        conn.commit()
+
+
+def update_user_language(chat_id: int, language: str):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE users SET language = %s, updated_at = NOW()
+                WHERE chat_id = %s
+            """, (language, chat_id))
+        conn.commit()
 
 
 def set_notifications(chat_id: int, enabled: bool):
