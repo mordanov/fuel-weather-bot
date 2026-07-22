@@ -7,9 +7,6 @@ import unicodedata
 from math import radians, sin, cos, sqrt, atan2
 
 import requests
-import urllib3
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 BASE_URL = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes"
 STATIONS_BY_PROVINCE_URL = BASE_URL + "/EstacionesTerrestres/FiltroProvincia/{province}"
@@ -20,9 +17,6 @@ REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; FuelPriceBot/1.0)",
     "Accept": "application/json",
 }
-
-_session = requests.Session()
-_session.verify = False  # minetur.gob.es has a broken TLS handshake (UNEXPECTED_EOF)
 
 
 def _parse_number(value):
@@ -46,7 +40,7 @@ def _normalize(text):
 def get_municipio_id(province_code: str, municipio_name: str) -> str:
     """Look up the Ministry's internal municipality ID by name."""
     url = MUNICIPIOS_URL.format(province=province_code)
-    resp = _session.get(url, headers=REQUEST_HEADERS, timeout=20)
+    resp = requests.get(url, headers=REQUEST_HEADERS, timeout=20)
     resp.raise_for_status()
     municipios = resp.json()
 
@@ -84,7 +78,7 @@ def fetch_stations(province_code: str, municipio_name: str = "") -> dict:
     else:
         url = STATIONS_BY_PROVINCE_URL.format(province=province_code)
 
-    resp = _session.get(url, headers=REQUEST_HEADERS, timeout=20)
+    resp = requests.get(url, headers=REQUEST_HEADERS, timeout=20)
     resp.raise_for_status()
     payload = resp.json()
 
