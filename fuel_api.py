@@ -6,7 +6,11 @@ import os
 import unicodedata
 from math import radians, sin, cos, sqrt, atan2
 
+import ssl
+
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.ssl_ import create_urllib3_context
 
 BASE_URL = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes"
 STATIONS_BY_PROVINCE_URL = BASE_URL + "/EstacionesTerrestres/FiltroProvincia/{province}"
@@ -17,6 +21,19 @@ REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; FuelPriceBot/1.0)",
     "Accept": "application/json",
 }
+
+
+class _LegacySSLAdapter(HTTPAdapter):
+    """Allow servers that close the connection after the TLS handshake (OP_LEGACY_SERVER_CONNECT)."""
+    def init_poolmanager(self, *args, **kwargs):
+        ctx = create_urllib3_context()
+        ctx.options |= ssl.OP_LEGACY_SERVER_CONNECT
+        kwargs["ssl_context"] = ctx
+        super().init_poolmanager(*args, **kwargs)
+
+
+_session = requests.Session()
+_session.mount("https://sedeaplicaciones.minetur.gob.es", _LegacySSLAdapter())
 
 
 def _parse_number(value):
@@ -40,7 +57,7 @@ def _normalize(text):
 def get_municipio_id(province_code: str, municipio_name: str) -> str:
     """Look up the Ministry's internal municipality ID by name."""
     url = MUNICIPIOS_URL.format(province=province_code)
-    resp = requests.get(url, headers=REQUEST_HEADERS, timeout=20)
+    resp = _session.get(url, headers=REQUEST_HEADERS, timeout=20)
     resp.raise_for_status()
     municipios = resp.json()
 
@@ -78,7 +95,7 @@ def fetch_stations(province_code: str, municipio_name: str = "") -> dict:
     else:
         url = STATIONS_BY_PROVINCE_URL.format(province=province_code)
 
-    resp = requests.get(url, headers=REQUEST_HEADERS, timeout=20)
+    resp = _session.get(url, headers=REQUEST_HEADERS, timeout=20)
     resp.raise_for_status()
     payload = resp.json()
 
