@@ -2,25 +2,17 @@
 Fuel price API helpers — Spain's Ministerio para la Transicion Ecologica feed.
 """
 
-import os
 import unicodedata
 from math import radians, sin, cos, sqrt, atan2
 
 import requests
 
-BASE_URL = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes"
-STATIONS_BY_PROVINCE_URL = BASE_URL + "/EstacionesTerrestres/FiltroProvincia/{province}"
-STATIONS_BY_MUNICIPIO_URL = BASE_URL + "/EstacionesTerrestres/FiltroMunicipio/{municipio}"
-MUNICIPIOS_URL = BASE_URL + "/Listados/MunicipiosPorProvincia/{province}"
+from fuel_providers import CompositeFuelProvider, ProviderConfig
 
-REQUEST_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; FuelPriceBot/1.0)",
-    "Accept": "application/json",
-}
+_provider = CompositeFuelProvider(ProviderConfig.from_env())
 
 
 def _parse_number(value):
-    """Convert Spanish-formatted decimal strings (e.g. '1,359') to float."""
     if value in (None, ""):
         return None
     try:
@@ -30,7 +22,6 @@ def _parse_number(value):
 
 
 def _normalize(text):
-    """Uppercase + strip accents, for tolerant municipality-name matching."""
     if not text:
         return ""
     nfkd = unicodedata.normalize("NFKD", text)
@@ -39,57 +30,12 @@ def _normalize(text):
 
 def get_municipio_id(province_code: str, municipio_name: str) -> str:
     """Look up the Ministry's internal municipality ID by name."""
-    url = MUNICIPIOS_URL.format(province=province_code)
-    resp = requests.get(url, headers=REQUEST_HEADERS, timeout=20)
-    resp.raise_for_status()
-    municipios = resp.json()
-
-    target = _normalize(municipio_name)
-    for m in municipios:
-        name = m.get("Municipio") or m.get("municipio") or ""
-        if _normalize(name) == target:
-            municipio_id = m.get("IDMunicipio") or m.get("IDMunicipio".upper())
-            if municipio_id:
-                return municipio_id
-
-    raise ValueError(
-        f"Municipality '{municipio_name}' not found in province {province_code}."
-    )
-
-
-def _station_summary(raw: dict) -> dict:
-    return {
-        "name": (raw.get("Rótulo") or "").strip(),
-        "address": (raw.get("Dirección") or "").strip(),
-        "town": (raw.get("Municipio") or "").strip(),
-        "postal_code": (raw.get("C.P.") or "").strip(),
-        "lat": _parse_number(raw.get("Latitud")),
-        "lon": _parse_number(raw.get("Longitud (WGS84)")),
-        "gasoline_95": _parse_number(raw.get("Precio Gasolina 95 E5")),
-        "diesel": _parse_number(raw.get("Precio Gasoleo A")),
-    }
+    return _provider.get_municipio_id(province_code, municipio_name)
 
 
 def fetch_stations(province_code: str, municipio_name: str = "") -> dict:
     """Fetch current station list + prices for the given province/municipality."""
-    if municipio_name:
-        municipio_id = get_municipio_id(province_code, municipio_name)
-        url = STATIONS_BY_MUNICIPIO_URL.format(municipio=municipio_id)
-    else:
-        url = STATIONS_BY_PROVINCE_URL.format(province=province_code)
-
-    resp = requests.get(url, headers=REQUEST_HEADERS, timeout=20)
-    resp.raise_for_status()
-    payload = resp.json()
-
-    raw_stations = payload.get("ListaEESSPrecio", [])
-    if not raw_stations:
-        raise ValueError("No stations returned from the API.")
-
-    return {
-        "date": payload.get("Fecha"),
-        "stations": [_station_summary(s) for s in raw_stations],
-    }
+    return _provider.fetch(province_code, municipio_name)
 
 
 def summarize(data: dict) -> dict:
