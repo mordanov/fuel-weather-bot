@@ -29,7 +29,7 @@ import os
 from datetime import date, timedelta
 
 import numpy as np
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, CommandHandler, ContextTypes
 
 import db
@@ -397,12 +397,43 @@ async def _user_daily_job(context: ContextTypes.DEFAULT_TYPE):
 # Entry point
 # ---------------------------------------------------------------------------
 
+_BOT_COMMANDS = [
+    BotCommand("check",       "Current fuel prices"),
+    BotCommand("weather",     "Air conditions"),
+    BotCommand("sea",         "Sea temperature & waves"),
+    BotCommand("air",         "Air quality index"),
+    BotCommand("pollen",      "Pollen levels"),
+    BotCommand("electricity", "Electricity spot price"),
+    BotCommand("ev",          "EV charging stations nearby"),
+    BotCommand("fire",        "Active forest fires nearby"),
+    BotCommand("traffic",     "Traffic incidents nearby"),
+    BotCommand("beaches",     "Beach quality nearby"),
+    BotCommand("parking",     "Parking lots nearby"),
+    BotCommand("around",      "Combined geo snapshot"),
+    BotCommand("predict",     "Tomorrow's price forecast"),
+    BotCommand("statistics",  "Price history"),
+    BotCommand("home",        "Set home location: /home <lat> <lon>"),
+    BotCommand("municipio",   "Change municipality"),
+    BotCommand("time",        "Daily notification time: /time HH:MM"),
+    BotCommand("language",    "Change language"),
+    BotCommand("location",    "Show current location"),
+    BotCommand("stop",        "Disable daily notifications"),
+    BotCommand("start",       "Show help"),
+]
+
+
+async def _post_init(app: Application) -> None:
+    await app.bot.set_my_commands(_BOT_COMMANDS)
+    logger.info("Bot commands registered (%d)", len(_BOT_COMMANDS))
+
+
 def main():
     db.init_schema()
 
     app: Application = (
         ApplicationBuilder()
         .token(TELEGRAM_BOT_TOKEN)
+        .post_init(_post_init)
         .build()
     )
 
