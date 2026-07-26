@@ -34,6 +34,7 @@ from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, 
 
 import db
 import fuel_api
+import geo_commands
 import i18n
 import weather_api
 
@@ -262,23 +263,6 @@ async def cmd_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("\n".join(lines))
 
 
-async def cmd_weather(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    user = db.get_or_create_user(chat_id)
-    lang = user.get("language", "en")
-
-    lat = user["home_lat"] if user["home_lat"] is not None else DEFAULT_LAT
-    lon = user["home_lon"] if user["home_lon"] is not None else DEFAULT_LON
-
-    try:
-        weather = weather_api.fetch_weather(lat, lon)
-    except Exception as e:
-        logger.exception("weather fetch failed")
-        await update.message.reply_text(i18n.t(lang, "weather_error", e=e))
-        return
-
-    await update.message.reply_text(weather_api.format_weather_message(weather, lat, lon, lang=lang))
-
 
 async def cmd_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -431,8 +415,10 @@ def main():
     app.add_handler(CommandHandler("predict", cmd_predict))
     app.add_handler(CommandHandler("statistics", cmd_statistics))
     app.add_handler(CommandHandler("stop", cmd_stop))
-    app.add_handler(CommandHandler("weather", cmd_weather))
     app.add_handler(CallbackQueryHandler(cb_language, pattern=r"^lang:"))
+
+    # Geo-information platform commands
+    geo_commands.register_handlers(app)
 
     # Restore per-user scheduled jobs from DB on startup
     for user in db.get_all_users():

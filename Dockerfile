@@ -5,6 +5,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY bot.py db.py fuel_api.py fuel_providers.py weather_api.py i18n.py ./
+COPY bot.py db.py fuel_api.py fuel_providers.py weather_api.py i18n.py geo_commands.py ./
+COPY geo/ ./geo/
 
 CMD ["python", "bot.py"]

@@ -3,17 +3,32 @@ SUPPORTED_LANGUAGES = {"en": "English", "es": "Español", "ru": "Русский"
 _T = {
     "en": {
         "welcome": (
-            "⛽ Fuel Price Bot\n\n"
-            "Commands:\n"
-            "  /check — current prices\n"
-            "  /home <lat> <lon> — set your home location\n"
+            "⛽ Geo Info Bot\n\n"
+            "Fuel:\n"
+            "  /fuel — current prices  /check — same\n"
+            "  /home <lat> <lon> — set home location\n"
             "  /municipio <name> — change municipality\n"
-            "  /time <HH:MM> — set daily notification time\n"
-            "  /language — change language\n"
             "  /predict — tomorrow's price forecast\n"
-            "  /statistics — price history\n"
-            "  /stop — disable daily notifications\n"
-            "  /weather — current air & sea conditions"
+            "  /statistics — price history\n\n"
+            "Environment:\n"
+            "  /weather — air conditions\n"
+            "  /sea — sea temperature & waves\n"
+            "  /air — air quality index\n"
+            "  /pollen — pollen levels\n"
+            "  /fire — active forest fires nearby\n\n"
+            "City:\n"
+            "  /electricity — electricity spot price\n"
+            "  /ev — EV charging stations\n"
+            "  /traffic — traffic incidents\n"
+            "  /beaches — beach quality\n"
+            "  /parking — parking lots\n\n"
+            "Overview:\n"
+            "  /around — combined snapshot\n"
+            "  /location — your current location\n\n"
+            "Settings:\n"
+            "  /time <HH:MM> — daily notification time\n"
+            "  /language — change language\n"
+            "  /stop — disable daily notifications"
         ),
         "fetching": "Fetching prices...",
         "fetch_error": "Error fetching prices: {e}",
@@ -53,20 +68,63 @@ _T = {
         "predict_caveat": "⚠️ Based on {n}-day linear trend. Fuel prices are volatile — treat as rough estimate only.",
         # weather
         "weather_header": "🌤 Weather ({lat:.4f}, {lon:.4f})",
+        # geo platform
+        "geo_error": "Error fetching {provider}: {e}",
+        "geo_no_data": "No data available.",
+        "geo_around_fetching": "Fetching all data sources...",
+        "geo_location_set": "📍 Your location: {lat:.4f}, {lon:.4f}",
+        "geo_location_default": "📍 Default location: {lat:.4f}, {lon:.4f}. Use /home <lat> <lon> to set yours.",
+        "geo_air_temp": "Air",
+        "geo_wind": "Wind",
+        "geo_humidity": "Humidity",
+        "geo_sea_header": "Sea conditions",
+        "geo_sea_temp": "Sea temp",
+        "geo_waves": "Waves",
+        "geo_air_header": "Air quality",
+        "geo_aqi": "AQI",
+        "geo_pollen_header": "Pollen levels",
+        "geo_electricity_header": "Electricity price today (REE)",
+        "geo_avg": "Avg",
+        "geo_min": "Min",
+        "geo_max": "Max",
+        "geo_ev_header": "{count} EV stations within {radius} km",
+        "geo_fire_none": "No active fires within {radius} km",
+        "geo_fire_header": "⚠️ {count} active fire(s) within {radius} km",
+        "geo_traffic_clear": "No traffic incidents nearby",
+        "geo_traffic_header": "{count} traffic incident(s) nearby",
+        "geo_beaches_none": "No beach data within {radius} km",
+        "geo_beaches_header": "{count} beach(es) within {radius} km",
+        "geo_parking_none": "No parking lots found nearby",
+        "geo_parking_header": "{count} parking lot(s) nearby",
     },
     "es": {
         "welcome": (
-            "⛽ Bot de Precios de Combustible\n\n"
-            "Comandos:\n"
-            "  /check — precios actuales\n"
+            "⛽ Bot de Información Geográfica\n\n"
+            "Combustible:\n"
+            "  /fuel — precios actuales  /check — igual\n"
             "  /home <lat> <lon> — establecer ubicación\n"
             "  /municipio <nombre> — cambiar municipio\n"
-            "  /time <HH:MM> — hora de notificación diaria\n"
+            "  /predict — previsión mañana\n"
+            "  /statistics — historial de precios\n\n"
+            "Medio ambiente:\n"
+            "  /weather — condiciones del aire\n"
+            "  /sea — temperatura mar y oleaje\n"
+            "  /air — índice calidad del aire\n"
+            "  /pollen — niveles de polen\n"
+            "  /fire — incendios forestales cercanos\n\n"
+            "Ciudad:\n"
+            "  /electricity — precio electricidad\n"
+            "  /ev — cargadores eléctricos\n"
+            "  /traffic — incidencias de tráfico\n"
+            "  /beaches — calidad de playas\n"
+            "  /parking — aparcamientos\n\n"
+            "Resumen:\n"
+            "  /around — resumen combinado\n"
+            "  /location — tu ubicación actual\n\n"
+            "Ajustes:\n"
+            "  /time <HH:MM> — hora de notificación\n"
             "  /language — cambiar idioma\n"
-            "  /predict — previsión de precios para mañana\n"
-            "  /statistics — historial de precios\n"
-            "  /stop — desactivar notificaciones diarias\n"
-            "  /weather — condiciones meteorológicas"
+            "  /stop — desactivar notificaciones"
         ),
         "fetching": "Obteniendo precios...",
         "fetch_error": "Error al obtener precios: {e}",
@@ -102,20 +160,63 @@ _T = {
         "predict_header": "📈 Previsión para {date} — {scope}",
         "predict_caveat": "⚠️ Basado en tendencia lineal de {n} días. Los precios son volátiles — solo orientativo.",
         "weather_header": "🌤 Tiempo ({lat:.4f}, {lon:.4f})",
+        # geo platform
+        "geo_error": "Error al obtener {provider}: {e}",
+        "geo_no_data": "Sin datos disponibles.",
+        "geo_around_fetching": "Obteniendo todas las fuentes de datos...",
+        "geo_location_set": "📍 Tu ubicación: {lat:.4f}, {lon:.4f}",
+        "geo_location_default": "📍 Ubicación por defecto: {lat:.4f}, {lon:.4f}. Usa /home <lat> <lon> para establecer la tuya.",
+        "geo_air_temp": "Aire",
+        "geo_wind": "Viento",
+        "geo_humidity": "Humedad",
+        "geo_sea_header": "Condiciones marinas",
+        "geo_sea_temp": "Temp. mar",
+        "geo_waves": "Oleaje",
+        "geo_air_header": "Calidad del aire",
+        "geo_aqi": "ICA",
+        "geo_pollen_header": "Niveles de polen",
+        "geo_electricity_header": "Precio electricidad hoy (REE)",
+        "geo_avg": "Media",
+        "geo_min": "Mín",
+        "geo_max": "Máx",
+        "geo_ev_header": "{count} cargadores eléctricos a menos de {radius} km",
+        "geo_fire_none": "Sin incendios activos a menos de {radius} km",
+        "geo_fire_header": "⚠️ {count} incendio(s) activo(s) a menos de {radius} km",
+        "geo_traffic_clear": "Sin incidencias de tráfico cercanas",
+        "geo_traffic_header": "{count} incidencia(s) de tráfico cercanas",
+        "geo_beaches_none": "Sin datos de playas a menos de {radius} km",
+        "geo_beaches_header": "{count} playa(s) a menos de {radius} km",
+        "geo_parking_none": "Sin aparcamientos encontrados cercanos",
+        "geo_parking_header": "{count} aparcamiento(s) cercano(s)",
     },
     "ru": {
         "welcome": (
-            "⛽ Бот цен на топливо\n\n"
-            "Команды:\n"
-            "  /check — текущие цены\n"
-            "  /home <lat> <lon> — установить домашнее местоположение\n"
+            "⛽ Гео-информационный бот\n\n"
+            "Топливо:\n"
+            "  /fuel — текущие цены  /check — то же\n"
+            "  /home <lat> <lon> — домашнее местоположение\n"
             "  /municipio <название> — изменить муниципалитет\n"
-            "  /time <ЧЧ:ММ> — время ежедневного уведомления\n"
+            "  /predict — прогноз на завтра\n"
+            "  /statistics — история цен\n\n"
+            "Окружающая среда:\n"
+            "  /weather — погода\n"
+            "  /sea — температура моря и волны\n"
+            "  /air — индекс качества воздуха\n"
+            "  /pollen — уровень пыльцы\n"
+            "  /fire — лесные пожары поблизости\n\n"
+            "Город:\n"
+            "  /electricity — цена электроэнергии\n"
+            "  /ev — зарядные станции\n"
+            "  /traffic — дорожные инциденты\n"
+            "  /beaches — качество пляжей\n"
+            "  /parking — парковки\n\n"
+            "Обзор:\n"
+            "  /around — сводка всех данных\n"
+            "  /location — текущее местоположение\n\n"
+            "Настройки:\n"
+            "  /time <ЧЧ:ММ> — время уведомления\n"
             "  /language — сменить язык\n"
-            "  /predict — прогноз цен на завтра\n"
-            "  /statistics — история цен\n"
-            "  /stop — отключить ежедневные уведомления\n"
-            "  /weather — погода и море"
+            "  /stop — отключить уведомления"
         ),
         "fetching": "Получаю цены...",
         "fetch_error": "Ошибка получения цен: {e}",
@@ -151,6 +252,34 @@ _T = {
         "predict_header": "📈 Прогноз на {date} — {scope}",
         "predict_caveat": "⚠️ На основе линейного тренда за {n} дней. Цены волатильны — только ориентир.",
         "weather_header": "🌤 Погода ({lat:.4f}, {lon:.4f})",
+        # geo platform
+        "geo_error": "Ошибка получения {provider}: {e}",
+        "geo_no_data": "Данные недоступны.",
+        "geo_around_fetching": "Получаю данные из всех источников...",
+        "geo_location_set": "📍 Ваше местоположение: {lat:.4f}, {lon:.4f}",
+        "geo_location_default": "📍 Местоположение по умолчанию: {lat:.4f}, {lon:.4f}. Используйте /home <lat> <lon> для установки своего.",
+        "geo_air_temp": "Воздух",
+        "geo_wind": "Ветер",
+        "geo_humidity": "Влажность",
+        "geo_sea_header": "Морские условия",
+        "geo_sea_temp": "Темп. моря",
+        "geo_waves": "Волны",
+        "geo_air_header": "Качество воздуха",
+        "geo_aqi": "ИКВ",
+        "geo_pollen_header": "Уровень пыльцы",
+        "geo_electricity_header": "Цена электроэнергии сегодня (REE)",
+        "geo_avg": "Средняя",
+        "geo_min": "Мин",
+        "geo_max": "Макс",
+        "geo_ev_header": "{count} зарядных станций в радиусе {radius} км",
+        "geo_fire_none": "Активных пожаров в радиусе {radius} км нет",
+        "geo_fire_header": "⚠️ {count} активный(-ых) пожар(ов) в радиусе {radius} км",
+        "geo_traffic_clear": "Дорожных инцидентов поблизости нет",
+        "geo_traffic_header": "{count} дорожный(-ых) инцидент(ов) поблизости",
+        "geo_beaches_none": "Данных о пляжах в радиусе {radius} км нет",
+        "geo_beaches_header": "{count} пляж(ей) в радиусе {radius} км",
+        "geo_parking_none": "Парковок поблизости не найдено",
+        "geo_parking_header": "{count} парковка(-ок) поблизости",
     },
 }
 
