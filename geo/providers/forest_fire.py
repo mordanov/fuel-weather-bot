@@ -1,7 +1,8 @@
 """
 ForestFireProvider — NASA FIRMS active fire data (MODIS/VIIRS, 24h).
 
-Public endpoint, no API key required for basic CSV access.
+Requires a free NASA FIRMS MAP_KEY: https://firms.modaps.eosdis.nasa.gov/api/area/
+Set the FIRMS_MAP_KEY environment variable.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ import csv
 import io
 import logging
 import math
+import os
 
 import httpx
 
@@ -18,8 +20,7 @@ from geo.provider import GeoDataProvider
 
 logger = logging.getLogger(__name__)
 
-# NASA FIRMS public CSV endpoint (VIIRS S-NPP 24h, global)
-_FIRMS_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv/VIIRS_SNPP_NRT/world/1"
+_FIRMS_BASE = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
 
 _DEFAULT_RADIUS_KM = 100
 
@@ -38,12 +39,19 @@ class ForestFireProvider(GeoDataProvider):
 
     def __init__(self, radius_km: int = _DEFAULT_RADIUS_KM) -> None:
         self._radius_km = radius_km
+        self._map_key = os.getenv("FIRMS_MAP_KEY", "")
 
     async def get_data(self, location: Location) -> GeoResult:
-        # Bounding box ±radius
+        if not self._map_key:
+            return self._fail(
+                "NASA FIRMS API key not configured. Set FIRMS_MAP_KEY "
+                "(free at https://firms.modaps.eosdis.nasa.gov/api/area/)"
+            )
+
+        # Bounding box ±radius — URL format: /csv/{MAP_KEY}/{SOURCE}/{BBOX}/1
         deg = self._radius_km / 111.0
         bbox = f"{location.lon - deg:.3f},{location.lat - deg:.3f},{location.lon + deg:.3f},{location.lat + deg:.3f}"
-        url = f"https://firms.modaps.eosdis.nasa.gov/api/area/csv/VIIRS_SNPP_NRT/{bbox}/1"
+        url = f"{_FIRMS_BASE}/{self._map_key}/VIIRS_SNPP_NRT/{bbox}/1"
 
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:

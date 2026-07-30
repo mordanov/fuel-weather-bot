@@ -406,8 +406,6 @@ _BOT_COMMANDS = [
     BotCommand("electricity", "Electricity spot price"),
     BotCommand("ev",          "EV charging stations nearby"),
     BotCommand("fire",        "Active forest fires nearby"),
-    BotCommand("traffic",     "Traffic incidents nearby"),
-    BotCommand("beaches",     "Beach quality nearby"),
     BotCommand("parking",     "Parking lots nearby"),
     BotCommand("around",      "Combined geo snapshot"),
     BotCommand("predict",     "Tomorrow's price forecast"),

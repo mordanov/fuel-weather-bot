@@ -10,8 +10,6 @@ Commands registered here:
   /electricity  — electricity spot prices (REE)
   /ev           — EV charging stations nearby
   /fire         — active forest fires nearby
-  /traffic      — traffic incidents nearby
-  /beaches      — beach quality
   /parking      — parking lots nearby
   /location     — show current location used for geo commands
   /around       — combined summary of all providers
@@ -33,7 +31,6 @@ import db
 from geo.aggregator import GeoDataAggregator
 from geo.models import Location, GeoResult
 from geo.providers.air_quality import AirQualityProvider, aqi_label
-from geo.providers.beach import BeachProvider
 from geo.providers.electricity import ElectricityPriceProvider
 from geo.providers.ev_charging import EVChargingProvider
 from geo.providers.forest_fire import ForestFireProvider
@@ -41,7 +38,6 @@ from geo.providers.fuel import FuelProvider
 from geo.providers.parking import ParkingProvider
 from geo.providers.pollen import PollenProvider, pollen_level_label
 from geo.providers.sea import SeaProvider
-from geo.providers.traffic import TrafficProvider
 from geo.providers.weather import WeatherProvider
 
 logger = logging.getLogger(__name__)
@@ -104,10 +100,6 @@ def build_aggregator() -> GeoDataAggregator:
         providers.append(EVChargingProvider(radius_km=SEARCH_RADIUS_KM))
     if enabled("ENABLE_FIRE_PROVIDER", "1") not in ("0", "false", "no"):
         providers.append(ForestFireProvider(radius_km=SEARCH_RADIUS_KM))
-    if enabled("ENABLE_TRAFFIC_PROVIDER", "1") not in ("0", "false", "no"):
-        providers.append(TrafficProvider(radius_km=SEARCH_RADIUS_KM))
-    if enabled("ENABLE_BEACH_PROVIDER", "1") not in ("0", "false", "no"):
-        providers.append(BeachProvider(radius_km=SEARCH_RADIUS_KM))
     if enabled("ENABLE_PARKING_PROVIDER", "1") not in ("0", "false", "no"):
         providers.append(ParkingProvider(radius_m=SEARCH_RADIUS_KM * 1000 // 5))
 
@@ -241,37 +233,6 @@ def _format_fire(result: GeoResult, lang: str) -> str:
     return "\n".join(lines)
 
 
-def _format_traffic(result: GeoResult, lang: str) -> str:
-    if not result.ok:
-        return i18n.t(lang, "geo_error", provider="traffic", e=result.error)
-    d = result.data
-    incidents = d.get("incidents", [])
-    if not incidents:
-        return f"🚗 {i18n.t(lang, 'geo_traffic_clear')}"
-    lines = [f"🚗 {i18n.t(lang, 'geo_traffic_header', count=len(incidents))}"]
-    for inc in incidents[:5]:
-        dist = f"{inc['distance_km']} km" if inc.get("distance_km") else ""
-        road = inc.get("road", "")
-        desc = inc.get("description", "") or inc.get("type", "")
-        lines.append(f"  ⚠️ {road} {dist} — {desc}".strip())
-    return "\n".join(lines)
-
-
-def _format_beaches(result: GeoResult, lang: str) -> str:
-    if not result.ok:
-        return i18n.t(lang, "geo_error", provider="beaches", e=result.error)
-    d = result.data
-    beaches = d.get("beaches", [])
-    if not beaches:
-        return f"🏖 {i18n.t(lang, 'geo_beaches_none', radius=d['radius_km'])}"
-    lines = [f"🏖 {i18n.t(lang, 'geo_beaches_header', count=len(beaches), radius=d['radius_km'])}"]
-    for b in beaches[:5]:
-        quality = b.get("quality", "")
-        year = b.get("year", "")
-        lines.append(f"  • {b['name']} ({b['distance_km']} km) — {quality} {year}".strip())
-    return "\n".join(lines)
-
-
 def _format_parking(result: GeoResult, lang: str) -> str:
     if not result.ok:
         return i18n.t(lang, "geo_error", provider="parking", e=result.error)
@@ -393,24 +354,6 @@ async def cmd_fire(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(_format_fire(result, lang))
 
 
-async def cmd_traffic(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    user = db.get_or_create_user(chat_id)
-    lang = user.get("language", "en")
-    loc = _user_location(user)
-    result = await build_aggregator().get("traffic", loc)
-    await update.message.reply_text(_format_traffic(result, lang))
-
-
-async def cmd_beaches(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    user = db.get_or_create_user(chat_id)
-    lang = user.get("language", "en")
-    loc = _user_location(user)
-    result = await build_aggregator().get("beach", loc)
-    await update.message.reply_text(_format_beaches(result, lang))
-
-
 async def cmd_parking(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user = db.get_or_create_user(chat_id)
@@ -439,7 +382,6 @@ async def cmd_around(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ("pollen", _format_pollen),
         ("electricity", _format_electricity),
         ("forest_fire", _format_fire),
-        ("traffic", _format_traffic),
     ]:
         if name in results:
             parts.append(fmt_fn(results[name], lang))
@@ -457,8 +399,6 @@ def register_handlers(app: Application) -> None:
     app.add_handler(CommandHandler("electricity", cmd_electricity))
     app.add_handler(CommandHandler("ev", cmd_ev))
     app.add_handler(CommandHandler("fire", cmd_fire))
-    app.add_handler(CommandHandler("traffic", cmd_traffic))
-    app.add_handler(CommandHandler("beaches", cmd_beaches))
     app.add_handler(CommandHandler("parking", cmd_parking))
     app.add_handler(CommandHandler("location", cmd_location))
     app.add_handler(CommandHandler("around", cmd_around))

@@ -16,7 +16,7 @@ from geo.provider import GeoDataProvider
 
 logger = logging.getLogger(__name__)
 
-_OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+_OVERPASS_URL = "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
 _DEFAULT_RADIUS_M = 1000
 
 

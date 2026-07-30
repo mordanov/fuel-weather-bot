@@ -29,6 +29,12 @@ class EVChargingProvider(GeoDataProvider):
         self._api_key = os.getenv("OPENCHARGEMAP_API_KEY", "")
 
     async def get_data(self, location: Location) -> GeoResult:
+        if not self._api_key:
+            return self._fail(
+                "OpenChargeMap API key not configured. Set OPENCHARGEMAP_API_KEY "
+                "(free at https://openchargemap.org/site/developerinfo)"
+            )
+
         params: dict = {
             "latitude": location.lat,
             "longitude": location.lon,
@@ -38,9 +44,8 @@ class EVChargingProvider(GeoDataProvider):
             "compact": True,
             "verbose": False,
             "output": "json",
+            "key": self._api_key,
         }
-        if self._api_key:
-            params["key"] = self._api_key
 
         headers = {"User-Agent": "GeoInfoBot/1.0"}
         try:

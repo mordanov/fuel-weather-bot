@@ -12,8 +12,6 @@ Coverage:
   - FuelProvider (via executor, wraps CompositeFuelProvider)
   - EVChargingProvider
   - ForestFireProvider
-  - TrafficProvider
-  - BeachProvider
   - ParkingProvider
 
 All external HTTP calls are mocked with unittest.mock or pytest-httpx.
@@ -39,8 +37,6 @@ from geo.providers.electricity import ElectricityPriceProvider
 from geo.providers.fuel import FuelProvider
 from geo.providers.ev_charging import EVChargingProvider
 from geo.providers.forest_fire import ForestFireProvider
-from geo.providers.traffic import TrafficProvider
-from geo.providers.beach import BeachProvider
 from geo.providers.parking import ParkingProvider
 
 MALAGA = Location(lat=36.7213, lon=-4.4214, city="Málaga", province="Málaga")
@@ -406,7 +402,7 @@ class TestEVChargingProvider:
             }
         ]
         patch_ctx, _, _ = _patch_httpx(body)
-        with patch_ctx:
+        with patch_ctx, patch.dict("os.environ", {"OPENCHARGEMAP_API_KEY": "testkey"}):
             result = await EVChargingProvider(radius_km=5).get_data(MALAGA)
         assert result.ok
         assert result.data["count"] == 1
@@ -420,7 +416,7 @@ class TestEVChargingProvider:
 class TestForestFireProvider:
     @pytest.mark.asyncio
     async def test_no_fires(self):
-        with patch("httpx.AsyncClient") as mock_cls:
+        with patch("httpx.AsyncClient") as mock_cls, patch.dict("os.environ", {"FIRMS_MAP_KEY": "testkey"}):
             mock_client = MagicMock()
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
             mock_client.__aexit__ = AsyncMock(return_value=False)
@@ -439,7 +435,7 @@ class TestForestFireProvider:
             "latitude,longitude,bright_ti4,frp,acq_date,acq_time\n"
             "36.80,-4.40,310.5,25.3,2026-07-26,1230\n"  # ~9 km from MALAGA
         )
-        with patch("httpx.AsyncClient") as mock_cls:
+        with patch("httpx.AsyncClient") as mock_cls, patch.dict("os.environ", {"FIRMS_MAP_KEY": "testkey"}):
             mock_client = MagicMock()
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
             mock_client.__aexit__ = AsyncMock(return_value=False)
@@ -452,70 +448,6 @@ class TestForestFireProvider:
         assert result.ok
         assert result.data["count"] == 1
         assert result.data["fires"][0]["distance_km"] < 50
-
-
-# ---------------------------------------------------------------------------
-# TrafficProvider tests
-# ---------------------------------------------------------------------------
-
-class TestTrafficProvider:
-    @pytest.mark.asyncio
-    async def test_ok_response(self):
-        body = [
-            {
-                "properties": {"tipo": "accidente", "descripcion": "Colisión", "carretera": "A-7"},
-                "geometry": {"coordinates": [-4.43, 36.73]},
-            }
-        ]
-        patch_ctx, _, _ = _patch_httpx(body)
-        with patch_ctx:
-            result = await TrafficProvider().get_data(MALAGA)
-        assert result.ok
-        assert result.data["count"] == 1
-
-    @pytest.mark.asyncio
-    async def test_empty_response(self):
-        patch_ctx, _, _ = _patch_httpx([])
-        with patch_ctx:
-            result = await TrafficProvider().get_data(MALAGA)
-        assert result.ok
-        assert result.data["count"] == 0
-
-
-# ---------------------------------------------------------------------------
-# BeachProvider tests
-# ---------------------------------------------------------------------------
-
-class TestBeachProvider:
-    @pytest.mark.asyncio
-    async def test_filters_by_country_and_radius(self):
-        body = {
-            "features": [
-                {
-                    "geometry": {"coordinates": [-4.45, 36.71]},
-                    "properties": {
-                        "countryCode": "ES",
-                        "name": "Playa de la Malagueta",
-                        "lastQuality": "Excellent",
-                        "lastYear": 2025,
-                    },
-                },
-                {
-                    "geometry": {"coordinates": [2.18, 41.38]},  # Barcelona — too far
-                    "properties": {"countryCode": "ES", "name": "Barceloneta", "lastQuality": "Good"},
-                },
-                {
-                    "geometry": {"coordinates": [-4.45, 36.71]},
-                    "properties": {"countryCode": "FR", "name": "Plage", "lastQuality": "Good"},
-                },
-            ]
-        }
-        patch_ctx, _, _ = _patch_httpx(body)
-        with patch_ctx:
-            result = await BeachProvider(radius_km=20).get_data(MALAGA)
-        assert result.ok
-        assert result.data["count"] == 1
-        assert result.data["beaches"][0]["name"] == "Playa de la Malagueta"
 
 
 # ---------------------------------------------------------------------------
