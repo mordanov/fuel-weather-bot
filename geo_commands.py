@@ -23,8 +23,11 @@ import logging
 import os
 from typing import Optional
 
+from html import escape
+
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.constants import ParseMode
 
 import i18n
 import db
@@ -205,16 +208,30 @@ def _format_electricity(result: GeoResult, lang: str) -> str:
     return "\n".join(l for l in lines if l)
 
 
+def _maps_link(lat: float | None, lon: float | None, label: str) -> str:
+    if lat is None or lon is None:
+        return escape(label)
+    url = f"https://maps.google.com/?q={lat},{lon}"
+    return f'<a href="{url}">{escape(label)}</a>'
+
+
 def _format_ev(result: GeoResult, lang: str) -> str:
     if not result.ok:
-        return i18n.t(lang, "geo_error", provider="EV charging", e=result.error)
+        return escape(i18n.t(lang, "geo_error", provider="EV charging", e=result.error))
     d = result.data
     stations = d.get("stations", [])
-    lines = [f"🔌 {i18n.t(lang, 'geo_ev_header', count=len(stations), radius=d['radius_km'])}"]
+    lines = [escape(f"🔌 {i18n.t(lang, 'geo_ev_header', count=len(stations), radius=d['radius_km'])}")]
     for s in stations[:5]:
         dist = f"{s['distance_km']:.1f} km" if s.get("distance_km") else ""
         kw = f"{s['max_kw']:.0f} kW" if s.get("max_kw") else ""
-        lines.append(f"  • {s['name'] or 'EV Station'} {dist} {kw}".rstrip())
+        addr = s.get("address") or ""
+        loc_label = _maps_link(s.get("lat"), s.get("lon"), addr or (s["name"] or "EV Station"))
+        name_part = escape(s["name"] or "EV Station") + (f": {loc_label}" if addr else "")
+        detail = " — ".join(filter(None, [dist, kw]))
+        line = f"  • {name_part}"
+        if detail:
+            line += f" — {detail}"
+        lines.append(line)
     if len(stations) > 5:
         lines.append(f"  … and {len(stations) - 5} more")
     return "\n".join(lines)
@@ -235,17 +252,25 @@ def _format_fire(result: GeoResult, lang: str) -> str:
 
 def _format_parking(result: GeoResult, lang: str) -> str:
     if not result.ok:
-        return i18n.t(lang, "geo_error", provider="parking", e=result.error)
+        return escape(i18n.t(lang, "geo_error", provider="parking", e=result.error))
     d = result.data
     lots = d.get("lots", [])
     if not lots:
-        return f"🅿️ {i18n.t(lang, 'geo_parking_none')}"
-    lines = [f"🅿️ {i18n.t(lang, 'geo_parking_header', count=len(lots))}"]
+        return escape(f"🅿️ {i18n.t(lang, 'geo_parking_none')}")
+    lines = [escape(f"🅿️ {i18n.t(lang, 'geo_parking_header', count=len(lots))}")]
     for lot in lots[:5]:
         name = lot.get("name") or "Parking"
+        addr = lot.get("address") or ""
+        dist = f"{lot['distance_km']:.2f} km" if lot.get("distance_km") is not None else ""
         cap = f"cap:{lot['capacity']}" if lot.get("capacity") else ""
         fee = f"fee:{lot['fee']}" if lot.get("fee") else ""
-        lines.append(f"  • {name} {cap} {fee}".strip())
+        loc_label = _maps_link(lot.get("lat"), lot.get("lon"), addr or name)
+        name_part = escape(name) + (f": {loc_label}" if addr else f": {loc_label}")
+        detail = " — ".join(filter(None, [dist, cap, fee]))
+        line = f"  • {name_part}"
+        if detail:
+            line += f" — {detail}"
+        lines.append(line)
     return "\n".join(lines)
 
 
@@ -342,7 +367,7 @@ async def cmd_ev(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = user.get("language", "en")
     loc = _user_location(user)
     result = await build_aggregator().get("ev_charging", loc)
-    await update.message.reply_text(_format_ev(result, lang))
+    await update.message.reply_text(_format_ev(result, lang), parse_mode=ParseMode.HTML)
 
 
 async def cmd_fire(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -360,7 +385,7 @@ async def cmd_parking(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = user.get("language", "en")
     loc = _user_location(user)
     result = await build_aggregator().get("parking", loc)
-    await update.message.reply_text(_format_parking(result, lang))
+    await update.message.reply_text(_format_parking(result, lang), parse_mode=ParseMode.HTML)
 
 
 async def cmd_around(update: Update, context: ContextTypes.DEFAULT_TYPE):
