@@ -454,22 +454,91 @@ class TestForestFireProvider:
 # ParkingProvider tests
 # ---------------------------------------------------------------------------
 
+def _make_parking_mock(osm_body: dict, occupancy_csv: str = "", catalog_csv: str = ""):
+    """Return a patched httpx.AsyncClient: POST → OSM JSON, GET → SMASSA CSVs in order."""
+    mock_client = MagicMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    osm_resp = MagicMock()
+    osm_resp.raise_for_status = MagicMock()
+    osm_resp.json.return_value = osm_body
+
+    occ_resp = MagicMock()
+    occ_resp.raise_for_status = MagicMock()
+    occ_resp.text = occupancy_csv
+
+    cat_resp = MagicMock()
+    cat_resp.raise_for_status = MagicMock()
+    cat_resp.text = catalog_csv
+
+    mock_client.post = AsyncMock(return_value=osm_resp)
+    mock_client.get = AsyncMock(side_effect=[occ_resp, cat_resp])
+    return patch("httpx.AsyncClient", return_value=mock_client)
+
+
 class TestParkingProvider:
     @pytest.mark.asyncio
     async def test_ok_response(self):
-        body = {
+        osm_body = {
             "elements": [
                 {
                     "type": "node",
                     "lat": 36.722,
                     "lon": -4.421,
-                    "tags": {"name": "Parking Alameda", "capacity": "200", "fee": "yes"},
+                    "tags": {
+                        "name": "Parking Alameda",
+                        "capacity": "200",
+                        "fee": "yes",
+                        "parking": "underground",
+                        "access": "yes",
+                    },
                 }
             ]
         }
-        patch_ctx, _, _ = _patch_httpx(body)
-        with patch_ctx:
+        with _make_parking_mock(osm_body):
             result = await ParkingProvider().get_data(MALAGA)
         assert result.ok
         assert result.data["count"] == 1
-        assert result.data["lots"][0]["capacity"] == "200"
+        lot = result.data["lots"][0]
+        assert lot["capacity"] == "200"
+        assert lot["parking_type"] == "underground"
+        assert lot["access"] == "public"
+        assert lot["fee"] == "yes"
+        assert lot["free_spaces"] is None  # no SMASSA match
+
+    @pytest.mark.asyncio
+    async def test_smassa_occupancy_enrichment(self):
+        osm_body = {
+            "elements": [
+                {
+                    "type": "node",
+                    "lat": 36.7209,
+                    "lon": -4.4119,
+                    "tags": {"name": "Cervantes", "operator": "SMASSA"},
+                }
+            ]
+        }
+        occupancy_csv = "dato,id,libres\nOCUPACION,CE,42\n"
+        catalog_csv = (
+            '"id","nombre","direccion","latitude","longitude","altitud"\n'
+            '"CE","Cervantes","Calle Cervantes","36.7208633","-4.4119148","9"\n'
+        )
+        with _make_parking_mock(osm_body, occupancy_csv, catalog_csv):
+            result = await ParkingProvider().get_data(MALAGA)
+        assert result.ok
+        assert result.data["lots"][0]["free_spaces"] == 42
+
+    @pytest.mark.asyncio
+    async def test_sorted_by_distance(self):
+        osm_body = {
+            "elements": [
+                {"type": "node", "lat": 36.74, "lon": -4.41, "tags": {}},
+                {"type": "node", "lat": 36.722, "lon": -4.421, "tags": {}},
+            ]
+        }
+        with _make_parking_mock(osm_body):
+            result = await ParkingProvider().get_data(MALAGA)
+        assert result.ok
+        dists = [lot["distance_km"] for lot in result.data["lots"]]
+        assert dists == sorted(dists)

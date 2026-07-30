@@ -262,15 +262,38 @@ def _format_parking(result: GeoResult, lang: str) -> str:
         name = lot.get("name") or "Parking"
         addr = lot.get("address") or ""
         dist = f"{lot['distance_km']:.2f} km" if lot.get("distance_km") is not None else ""
-        cap = f"cap:{lot['capacity']}" if lot.get("capacity") else ""
-        fee = f"fee:{lot['fee']}" if lot.get("fee") else ""
+
+        # Line 1: name + map link
         loc_label = _maps_link(lot.get("lat"), lot.get("lon"), addr or name)
         name_part = escape(name) + (f": {loc_label}" if addr else f": {loc_label}")
-        detail = " — ".join(filter(None, [dist, cap, fee]))
         line = f"  • {name_part}"
-        if detail:
-            line += f" — {detail}"
+        if dist:
+            line += f" — {escape(dist)}"
         lines.append(line)
+
+        # Line 2: type / access / fee / occupancy badges
+        badges = []
+        if lot.get("parking_type"):
+            badges.append(escape(lot["parking_type"]))
+        if lot.get("access"):
+            badges.append(escape(lot["access"]))
+        if lot.get("fee") == "yes":
+            badges.append("paid")
+        elif lot.get("fee") == "no":
+            badges.append("free")
+        if lot.get("opening_hours"):
+            badges.append(escape(lot["opening_hours"]))
+        if lot.get("maxheight"):
+            badges.append(f"max {escape(lot['maxheight'])} m")
+        if lot.get("capacity"):
+            badges.append(f"cap {escape(lot['capacity'])}")
+        if lot.get("free_spaces") is not None:
+            free = lot["free_spaces"]
+            emoji = "🟢" if free > 20 else ("🟡" if free > 5 else "🔴")
+            badges.append(f"{emoji} {free} free")
+        if badges:
+            lines.append(f"    {' · '.join(badges)}")
+
     return "\n".join(lines)
 
 
