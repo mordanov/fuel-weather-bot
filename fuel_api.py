@@ -28,6 +28,75 @@ def _normalize(text):
     return "".join(c for c in nfkd if not unicodedata.combining(c)).upper().strip()
 
 
+PROVINCE_CODES = {
+    "ALAVA": "01", "ARABA": "01",
+    "ALBACETE": "02",
+    "ALICANTE": "03", "ALACANT": "03",
+    "ALMERIA": "04", "ALMERÍA": "04",
+    "AVILA": "05", "ÁVILA": "05",
+    "BADAJOZ": "06",
+    "BALEARES": "07", "ILLES BALEARS": "07", "ISLAS BALEARES": "07", "MALLORCA": "07",
+    "BARCELONA": "08",
+    "BURGOS": "09",
+    "CACERES": "10", "CÁCERES": "10",
+    "CADIZ": "11", "CÁDIZ": "11",
+    "CASTELLON": "12", "CASTELLÓ": "12", "CASTELLÓN": "12",
+    "CIUDAD REAL": "13",
+    "CORDOBA": "14", "CÓRDOBA": "14",
+    "A CORUNA": "15", "LA CORUNA": "15", "LA CORUÑA": "15", "CORUÑA": "15", "A CORUÑA": "15",
+    "CUENCA": "16",
+    "GIRONA": "17", "GERONA": "17",
+    "GRANADA": "18",
+    "GUADALAJARA": "19",
+    "GIPUZKOA": "20", "GUIPUZCOA": "20", "GUIPÚZCOA": "20",
+    "HUELVA": "21",
+    "HUESCA": "22",
+    "JAEN": "23", "JAÉN": "23",
+    "LEON": "24", "LEÓN": "24",
+    "LLEIDA": "25", "LERIDA": "25", "LÉRIDA": "25",
+    "LA RIOJA": "26", "RIOJA": "26",
+    "LUGO": "27",
+    "MADRID": "28",
+    "MALAGA": "29", "MÁLAGA": "29",
+    "MURCIA": "30",
+    "NAVARRA": "31", "NAVARRE": "31",
+    "OURENSE": "32", "ORENSE": "32",
+    "ASTURIAS": "33", "OVIEDO": "33",
+    "PALENCIA": "34",
+    "LAS PALMAS": "35", "GRAN CANARIA": "35",
+    "PONTEVEDRA": "36",
+    "SALAMANCA": "37",
+    "SANTA CRUZ DE TENERIFE": "38", "TENERIFE": "38",
+    "CANTABRIA": "39", "SANTANDER": "39",
+    "SEGOVIA": "40",
+    "SEVILLA": "41", "SEVILLE": "41",
+    "SORIA": "42",
+    "TARRAGONA": "43",
+    "TERUEL": "44",
+    "TOLEDO": "45",
+    "VALENCIA": "46", "VALÈNCIA": "46",
+    "VALLADOLID": "47",
+    "BIZKAIA": "48", "VIZCAYA": "48",
+    "ZAMORA": "49",
+    "ZARAGOZA": "50",
+    "CEUTA": "51",
+    "MELILLA": "52",
+}
+
+
+def find_province_code(name: str) -> str:
+    """Return the INE province code for a given province name, or raise ValueError."""
+    key = _normalize(name)
+    code = PROVINCE_CODES.get(key)
+    if code:
+        return code
+    # partial match fallback
+    for prov_name, prov_code in PROVINCE_CODES.items():
+        if key in prov_name or prov_name in key:
+            return prov_code
+    raise ValueError(f"Province '{name}' not found.")
+
+
 def get_municipio_id(province_code: str, municipio_name: str) -> str:
     """Look up the Ministry's internal municipality ID by name."""
     return _provider.get_municipio_id(province_code, municipio_name)

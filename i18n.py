@@ -7,6 +7,7 @@ _T = {
             "Fuel:\n"
             "  /fuel — current prices  /check — same\n"
             "  /home <lat> <lon> — set home location\n"
+            "  /province <name> — change province (e.g. Madrid)\n"
             "  /municipio <name> — change municipality\n"
             "  /predict — tomorrow's price forecast\n"
             "  /statistics — price history\n\n"
@@ -39,6 +40,9 @@ _T = {
         "municipio_usage": "Usage: /municipio <name>\nExample: /municipio Torremolinos",
         "municipio_not_found": "Municipality '{name}' not found in province {province}. No changes made.",
         "municipio_updated": "Municipality updated to {name}.",
+        "province_usage": "Usage: /province <name>\nExample: /province Madrid\nExample: /province Zaragoza",
+        "province_not_found": "Province '{name}' not found. Try a Spanish province name, e.g. Madrid, Malaga, Zaragoza, Sevilla.",
+        "province_updated": "Province changed to {name} (code {code}). Municipality cleared — use /municipio to set one.",
         "time_usage": "Usage: /time <HH:MM>\nExample: /time 08:30",
         "time_invalid": "Invalid time format. Use HH:MM, e.g. /time 08:30",
         "time_set": "Daily notification time set to {time}.",
@@ -103,6 +107,7 @@ _T = {
             "Combustible:\n"
             "  /fuel — precios actuales  /check — igual\n"
             "  /home <lat> <lon> — establecer ubicación\n"
+            "  /province <nombre> — cambiar provincia (p. ej. Madrid)\n"
             "  /municipio <nombre> — cambiar municipio\n"
             "  /predict — previsión mañana\n"
             "  /statistics — historial de precios\n\n"
@@ -135,6 +140,9 @@ _T = {
         "municipio_usage": "Uso: /municipio <nombre>\nEjemplo: /municipio Torremolinos",
         "municipio_not_found": "Municipio '{name}' no encontrado en la provincia {province}. Sin cambios.",
         "municipio_updated": "Municipio actualizado a {name}.",
+        "province_usage": "Uso: /province <nombre>\nEjemplo: /province Madrid\nEjemplo: /province Zaragoza",
+        "province_not_found": "Provincia '{name}' no encontrada. Prueba con un nombre de provincia española, p. ej. Madrid, Malaga, Zaragoza, Sevilla.",
+        "province_updated": "Provincia cambiada a {name} (código {code}). Municipio borrado — usa /municipio para establecer uno.",
         "time_usage": "Uso: /time <HH:MM>\nEjemplo: /time 08:30",
         "time_invalid": "Formato de hora no válido. Usa HH:MM, p. ej. /time 08:30",
         "time_set": "Hora de notificación diaria establecida a las {time}.",
@@ -195,6 +203,7 @@ _T = {
             "Топливо:\n"
             "  /fuel — текущие цены  /check — то же\n"
             "  /home <lat> <lon> — домашнее местоположение\n"
+            "  /province <название> — сменить провинцию (напр. Madrid)\n"
             "  /municipio <название> — изменить муниципалитет\n"
             "  /predict — прогноз на завтра\n"
             "  /statistics — история цен\n\n"
@@ -227,6 +236,9 @@ _T = {
         "municipio_usage": "Использование: /municipio <название>\nПример: /municipio Torremolinos",
         "municipio_not_found": "Муниципалитет '{name}' не найден в провинции {province}. Изменений нет.",
         "municipio_updated": "Муниципалитет обновлён: {name}.",
+        "province_usage": "Использование: /province <название>\nПример: /province Madrid\nПример: /province Zaragoza",
+        "province_not_found": "Провинция '{name}' не найдена. Попробуйте название испанской провинции, например Madrid, Malaga, Zaragoza, Sevilla.",
+        "province_updated": "Провинция изменена на {name} (код {code}). Муниципалитет сброшен — используйте /municipio для выбора.",
         "time_usage": "Использование: /time <ЧЧ:ММ>\nПример: /time 08:30",
         "time_invalid": "Неверный формат времени. Используйте ЧЧ:ММ, например /time 08:30",
         "time_set": "Время ежедневного уведомления установлено на {time}.",

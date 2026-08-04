@@ -142,6 +142,27 @@ async def cmd_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(i18n.t(lang, "home_set", lat=lat, lon=lon))
 
 
+async def cmd_province(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    user = db.get_or_create_user(chat_id)
+    lang = user.get("language", "en")
+    args = context.args
+
+    if not args:
+        await update.message.reply_text(i18n.t(lang, "province_usage"))
+        return
+
+    name = " ".join(args)
+    try:
+        code = fuel_api.find_province_code(name)
+    except ValueError:
+        await update.message.reply_text(i18n.t(lang, "province_not_found", name=name))
+        return
+
+    db.update_user_municipio(chat_id, "", code)
+    await update.message.reply_text(i18n.t(lang, "province_updated", name=name, code=code))
+
+
 async def cmd_municipio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user = db.get_or_create_user(chat_id)
@@ -411,6 +432,7 @@ _BOT_COMMANDS = [
     BotCommand("predict",     "Tomorrow's price forecast"),
     BotCommand("statistics",  "Price history"),
     BotCommand("home",        "Set home location: /home <lat> <lon>"),
+    BotCommand("province",    "Change province: /province <name>"),
     BotCommand("municipio",   "Change municipality"),
     BotCommand("time",        "Daily notification time: /time HH:MM"),
     BotCommand("language",    "Change language"),
@@ -438,6 +460,7 @@ def main():
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("check", cmd_check))
     app.add_handler(CommandHandler("home", cmd_home))
+    app.add_handler(CommandHandler("province", cmd_province))
     app.add_handler(CommandHandler("municipio", cmd_municipio))
     app.add_handler(CommandHandler("time", cmd_time))
     app.add_handler(CommandHandler("language", cmd_language))
