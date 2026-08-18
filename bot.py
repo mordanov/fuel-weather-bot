@@ -416,6 +416,35 @@ async def _user_daily_job(context: ContextTypes.DEFAULT_TYPE):
 
 
 # ---------------------------------------------------------------------------
+# /earthquake command — latest 3 quakes in BBOX, enriched with reverse geocoding
+# ---------------------------------------------------------------------------
+
+async def cmd_earthquake(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    user = db.get_or_create_user(chat_id)
+    lang = user.get("language", "en")
+
+    await update.message.reply_text("Fetching latest earthquakes…")
+
+    try:
+        quakes = terremoto.fetch_recent_quakes()
+    except Exception as e:
+        logger.exception("Earthquake fetch failed")
+        await update.message.reply_text(i18n.t(lang, "fetch_error", e=e))
+        return
+
+    if not quakes:
+        await update.message.reply_text("No recent earthquakes found in the monitored region.")
+        return
+
+    for feature in quakes[:3]:
+        lon, lat, _ = feature["geometry"]["coordinates"]
+        nearest = terremoto.reverse_geocode(lat, lon)
+        msg = terremoto.format_message(feature, nearest_place=nearest)
+        await update.message.reply_text(msg, parse_mode="HTML", disable_web_page_preview=True)
+
+
+# ---------------------------------------------------------------------------
 # Earthquake alert job (broadcast to all subscribed users)
 # ---------------------------------------------------------------------------
 
@@ -468,6 +497,7 @@ _BOT_COMMANDS = [
     BotCommand("pollen",      "Pollen levels"),
     BotCommand("electricity", "Electricity spot price"),
     BotCommand("ev",          "EV charging stations nearby"),
+    BotCommand("earthquake",  "Latest earthquakes in the region"),
     BotCommand("fire",        "Active forest fires nearby"),
     BotCommand("parking",     "Parking lots nearby"),
     BotCommand("around",      "Combined geo snapshot"),
@@ -509,6 +539,7 @@ def main():
     app.add_handler(CommandHandler("predict", cmd_predict))
     app.add_handler(CommandHandler("statistics", cmd_statistics))
     app.add_handler(CommandHandler("stop", cmd_stop))
+    app.add_handler(CommandHandler("earthquake", cmd_earthquake))
     app.add_handler(CallbackQueryHandler(cb_language, pattern=r"^lang:"))
 
     # Geo-information platform commands
