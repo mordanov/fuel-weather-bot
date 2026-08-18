@@ -66,6 +66,17 @@ def init_schema():
                     UNIQUE(snapshot_date, province_code, municipio_name)
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS earthquake_seen_events (
+                    event_id   TEXT PRIMARY KEY,
+                    seen_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """)
+            # keep the table small: evict events older than 7 days
+            cur.execute("""
+                DELETE FROM earthquake_seen_events
+                WHERE seen_at < NOW() - INTERVAL '7 days'
+            """)
         conn.commit()
 
 
@@ -189,3 +200,23 @@ def get_all_users() -> list:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("SELECT * FROM users WHERE notifications_enabled = TRUE")
             return [dict(r) for r in cur.fetchall()]
+
+
+def get_seen_earthquake_ids() -> set:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT event_id FROM earthquake_seen_events")
+            return {row[0] for row in cur.fetchall()}
+
+
+def mark_earthquakes_seen(event_ids: list):
+    if not event_ids:
+        return
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            psycopg2.extras.execute_values(
+                cur,
+                "INSERT INTO earthquake_seen_events (event_id) VALUES %s ON CONFLICT DO NOTHING",
+                [(eid,) for eid in event_ids],
+            )
+        conn.commit()

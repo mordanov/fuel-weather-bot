@@ -36,6 +36,7 @@ import db
 import fuel_api
 import geo_commands
 import i18n
+import terremoto
 import weather_api
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -415,6 +416,47 @@ async def _user_daily_job(context: ContextTypes.DEFAULT_TYPE):
 
 
 # ---------------------------------------------------------------------------
+# Earthquake alert job (broadcast to all subscribed users)
+# ---------------------------------------------------------------------------
+
+async def _earthquake_check_job(context: ContextTypes.DEFAULT_TYPE):
+    try:
+        quakes = terremoto.fetch_recent_quakes()
+    except Exception as e:
+        logger.error("Earthquake fetch failed: %s", e)
+        return
+
+    seen = db.get_seen_earthquake_ids()
+    new_quakes = [q for q in quakes if q["id"] not in seen]
+    new_quakes.reverse()  # oldest first
+
+    if not new_quakes:
+        return
+
+    users = db.get_all_users()
+    newly_seen = []
+    for q in new_quakes:
+        msg = terremoto.format_message(q)
+        sent = False
+        for user in users:
+            try:
+                await context.bot.send_message(
+                    chat_id=user["chat_id"],
+                    text=msg,
+                    parse_mode="HTML",
+                    disable_web_page_preview=True,
+                )
+                sent = True
+            except Exception as e:
+                logger.error("Failed to send earthquake alert to %s: %s", user["chat_id"], e)
+        if sent:
+            newly_seen.append(q["id"])
+            logger.info("Earthquake alerted: %s", q["id"])
+
+    db.mark_earthquakes_seen(newly_seen)
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -476,6 +518,14 @@ def main():
     for user in db.get_all_users():
         _reschedule_user(app, user)
     logger.info("Scheduled jobs restored for %d users", len(db.get_all_users()))
+
+    app.job_queue.run_repeating(
+        _earthquake_check_job,
+        interval=terremoto.POLL_SECONDS,
+        first=10,
+        name="earthquake_check",
+    )
+    logger.info("Earthquake check job scheduled every %ds", terremoto.POLL_SECONDS)
 
     logger.info("Bot polling...")
     app.run_polling()
