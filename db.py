@@ -53,6 +53,10 @@ def init_schema():
                 ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en'
             """)
             cur.execute("""
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS timezone_offset INT NOT NULL DEFAULT 0
+            """)
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS price_snapshots (
                     id              SERIAL PRIMARY KEY,
                     snapshot_date   DATE NOT NULL,
@@ -181,6 +185,16 @@ def update_user_language(chat_id: int, language: str):
                 UPDATE users SET language = %s, updated_at = NOW()
                 WHERE chat_id = %s
             """, (language, chat_id))
+        conn.commit()
+
+
+def update_user_timezone(chat_id: int, offset: int):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE users SET timezone_offset = %s, updated_at = NOW()
+                WHERE chat_id = %s
+            """, (offset, chat_id))
         conn.commit()
 
 

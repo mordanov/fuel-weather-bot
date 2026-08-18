@@ -9,7 +9,9 @@ Configuration via environment variables:
 """
 
 import os
+from datetime import datetime, timedelta
 
+import i18n
 import requests
 
 _NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse"
@@ -28,6 +30,17 @@ BBOX = {
     "minlon": float(os.environ.get("TERREMOTO_MINLON", "-19.0")),
     "maxlon": float(os.environ.get("TERREMOTO_MAXLON", "5.0")),
 }
+
+
+def _format_time(time_str: str, tz_offset: int) -> str:
+    """Parse EMSC ISO timestamp, apply offset, return human-readable string."""
+    try:
+        dt = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
+        dt = dt + timedelta(hours=tz_offset)
+        tz_label = "UTC" if tz_offset == 0 else f"UTC{tz_offset:+d}"
+        return dt.strftime("%Y-%m-%d %H:%M:%S") + f" ({tz_label})"
+    except (ValueError, AttributeError):
+        return time_str
 
 
 def reverse_geocode(lat: float, lon: float) -> str | None:
@@ -69,24 +82,23 @@ def fetch_recent_quakes() -> list:
     return resp.json().get("features", [])
 
 
-def format_message(feature: dict, nearest_place: str | None = None) -> str:
+def format_message(
+    feature: dict,
+    nearest_place: str | None = None,
+    lang: str = "en",
+    tz_offset: int = 0,
+) -> str:
     props = feature["properties"]
     lon, lat, depth = feature["geometry"]["coordinates"]
     mag = props.get("mag")
     magtype = props.get("magtype", "")
     region = props.get("flynn_region", "Unknown region")
-    time_str = props.get("time", "")
+    time_str = _format_time(props.get("time", ""), tz_offset)
     maps_url = f"https://www.google.com/maps?q={lat},{lon}"
+    location = f"{nearest_place} ({region})" if nearest_place else region
 
-    location_line = region
-    if nearest_place:
-        location_line = f"{nearest_place} ({region})"
-
-    return (
-        f"\U0001F30D <b>Earthquake detected</b>\n"
-        f"Magnitude: <b>{mag} {magtype}</b>\n"
-        f"Location: {location_line}\n"
-        f"Depth: {depth} km\n"
-        f"Time (UTC): {time_str}\n"
-        f'<a href="{maps_url}">View on map</a>'
+    return i18n.t(
+        lang, "earthquake_message",
+        mag=mag, magtype=magtype, location=location,
+        depth=depth, time_str=time_str, maps_url=maps_url,
     )

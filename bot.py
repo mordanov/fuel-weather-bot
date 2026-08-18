@@ -423,8 +423,9 @@ async def cmd_earthquake(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user = db.get_or_create_user(chat_id)
     lang = user.get("language", "en")
+    tz_offset = user.get("timezone_offset", 0)
 
-    await update.message.reply_text("Fetching latest earthquakes…")
+    await update.message.reply_text(i18n.t(lang, "earthquake_fetching"))
 
     try:
         quakes = terremoto.fetch_recent_quakes()
@@ -434,14 +435,36 @@ async def cmd_earthquake(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if not quakes:
-        await update.message.reply_text("No recent earthquakes found in the monitored region.")
+        await update.message.reply_text(i18n.t(lang, "earthquake_none"))
         return
 
     for feature in quakes[:3]:
         lon, lat, _ = feature["geometry"]["coordinates"]
         nearest = terremoto.reverse_geocode(lat, lon)
-        msg = terremoto.format_message(feature, nearest_place=nearest)
+        msg = terremoto.format_message(feature, nearest_place=nearest, lang=lang, tz_offset=tz_offset)
         await update.message.reply_text(msg, parse_mode="HTML", disable_web_page_preview=True)
+
+
+async def cmd_timezone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    user = db.get_or_create_user(chat_id)
+    lang = user.get("language", "en")
+
+    if not context.args:
+        await update.message.reply_text(i18n.t(lang, "timezone_usage"))
+        return
+
+    try:
+        offset = int(context.args[0])
+        if not (-12 <= offset <= 14):
+            raise ValueError
+    except (ValueError, IndexError):
+        await update.message.reply_text(i18n.t(lang, "timezone_invalid"))
+        return
+
+    db.update_user_timezone(chat_id, offset)
+    tz_label = "UTC" if offset == 0 else f"UTC{offset:+d}"
+    await update.message.reply_text(i18n.t(lang, "timezone_set", offset=tz_label))
 
 
 # ---------------------------------------------------------------------------
@@ -465,9 +488,13 @@ async def _earthquake_check_job(context: ContextTypes.DEFAULT_TYPE):
     users = db.get_all_users()
     newly_seen = []
     for q in new_quakes:
-        msg = terremoto.format_message(q)
+        lon, lat, _ = q["geometry"]["coordinates"]
+        nearest = terremoto.reverse_geocode(lat, lon)
         sent = False
         for user in users:
+            lang = user.get("language", "en")
+            tz_offset = user.get("timezone_offset", 0)
+            msg = terremoto.format_message(q, nearest_place=nearest, lang=lang, tz_offset=tz_offset)
             try:
                 await context.bot.send_message(
                     chat_id=user["chat_id"],
@@ -507,6 +534,7 @@ _BOT_COMMANDS = [
     BotCommand("province",    "Change province: /province <name>"),
     BotCommand("municipio",   "Change municipality"),
     BotCommand("time",        "Daily notification time: /time HH:MM"),
+    BotCommand("timezone",    "Set timezone offset: /timezone +2"),
     BotCommand("language",    "Change language"),
     BotCommand("location",    "Show current location"),
     BotCommand("stop",        "Disable daily notifications"),
@@ -540,6 +568,7 @@ def main():
     app.add_handler(CommandHandler("statistics", cmd_statistics))
     app.add_handler(CommandHandler("stop", cmd_stop))
     app.add_handler(CommandHandler("earthquake", cmd_earthquake))
+    app.add_handler(CommandHandler("timezone", cmd_timezone))
     app.add_handler(CallbackQueryHandler(cb_language, pattern=r"^lang:"))
 
     # Geo-information platform commands

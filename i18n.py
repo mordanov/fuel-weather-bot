@@ -26,8 +26,11 @@ _T = {
             "Overview:\n"
             "  /around — combined snapshot\n"
             "  /location — your current location\n\n"
+            "Alerts:\n"
+            "  /earthquake — latest earthquakes in the region\n\n"
             "Settings:\n"
             "  /time <HH:MM> — daily notification time\n"
+            "  /timezone <+N> — timezone offset (e.g. +2, -3)\n"
             "  /language — change language\n"
             "  /stop — disable daily notifications"
         ),
@@ -100,6 +103,21 @@ _T = {
         "geo_beaches_header": "{count} beach(es) within {radius} km",
         "geo_parking_none": "No parking lots found nearby",
         "geo_parking_header": "{count} parking lot(s) nearby",
+        # earthquake
+        "earthquake_fetching": "Fetching latest earthquakes…",
+        "earthquake_none": "No recent earthquakes in the monitored region.",
+        "earthquake_message": (
+            "\U0001F30D <b>Earthquake detected</b>\n"
+            "Magnitude: <b>{mag} {magtype}</b>\n"
+            "Location: {location}\n"
+            "Depth: {depth} km\n"
+            "Time: {time_str}\n"
+            '<a href="{maps_url}">View on map</a>'
+        ),
+        # timezone
+        "timezone_usage": "Usage: /timezone <offset>\nExamples: /timezone +2  /timezone -3  /timezone 0\nValid range: -12 to +14",
+        "timezone_set": "Timezone set to UTC{offset}.",
+        "timezone_invalid": "Invalid timezone. Use a number like +2, -3 or 0. Range: -12 to +14.",
     },
     "es": {
         "welcome": (
@@ -126,8 +144,11 @@ _T = {
             "Resumen:\n"
             "  /around — resumen combinado\n"
             "  /location — tu ubicación actual\n\n"
+            "Alertas:\n"
+            "  /earthquake — últimos terremotos en la región\n\n"
             "Ajustes:\n"
             "  /time <HH:MM> — hora de notificación\n"
+            "  /timezone <+N> — desfase horario (p. ej. +2, -3)\n"
             "  /language — cambiar idioma\n"
             "  /stop — desactivar notificaciones"
         ),
@@ -196,6 +217,21 @@ _T = {
         "geo_beaches_header": "{count} playa(s) a menos de {radius} km",
         "geo_parking_none": "Sin aparcamientos encontrados cercanos",
         "geo_parking_header": "{count} aparcamiento(s) cercano(s)",
+        # earthquake
+        "earthquake_fetching": "Obteniendo últimos terremotos…",
+        "earthquake_none": "No hay terremotos recientes en la región monitoreada.",
+        "earthquake_message": (
+            "\U0001F30D <b>Terremoto detectado</b>\n"
+            "Magnitud: <b>{mag} {magtype}</b>\n"
+            "Ubicación: {location}\n"
+            "Profundidad: {depth} km\n"
+            "Hora: {time_str}\n"
+            '<a href="{maps_url}">Ver en el mapa</a>'
+        ),
+        # timezone
+        "timezone_usage": "Uso: /timezone <desfase>\nEjemplos: /timezone +2  /timezone -3  /timezone 0\nRango válido: -12 a +14",
+        "timezone_set": "Zona horaria establecida en UTC{offset}.",
+        "timezone_invalid": "Zona horaria no válida. Usa un número como +2, -3 o 0. Rango: -12 a +14.",
     },
     "ru": {
         "welcome": (
@@ -222,8 +258,11 @@ _T = {
             "Обзор:\n"
             "  /around — сводка всех данных\n"
             "  /location — текущее местоположение\n\n"
+            "Оповещения:\n"
+            "  /earthquake — последние землетрясения в регионе\n\n"
             "Настройки:\n"
             "  /time <ЧЧ:ММ> — время уведомления\n"
+            "  /timezone <+N> — смещение часового пояса (напр. +2, -3)\n"
             "  /language — сменить язык\n"
             "  /stop — отключить уведомления"
         ),
@@ -292,6 +331,21 @@ _T = {
         "geo_beaches_header": "{count} пляж(ей) в радиусе {radius} км",
         "geo_parking_none": "Парковок поблизости не найдено",
         "geo_parking_header": "{count} парковка(-ок) поблизости",
+        # earthquake
+        "earthquake_fetching": "Получаю данные о последних землетрясениях…",
+        "earthquake_none": "Последних землетрясений в отслеживаемом регионе нет.",
+        "earthquake_message": (
+            "\U0001F30D <b>Обнаружено землетрясение</b>\n"
+            "Магнитуда: <b>{mag} {magtype}</b>\n"
+            "Местоположение: {location}\n"
+            "Глубина: {depth} км\n"
+            "Время: {time_str}\n"
+            '<a href="{maps_url}">Показать на карте</a>'
+        ),
+        # timezone
+        "timezone_usage": "Использование: /timezone <смещение>\nПримеры: /timezone +2  /timezone -3  /timezone 0\nДопустимый диапазон: от -12 до +14",
+        "timezone_set": "Часовой пояс установлен: UTC{offset}.",
+        "timezone_invalid": "Неверный часовой пояс. Введите число, например +2, -3 или 0. Диапазон: от -12 до +14.",
     },
 }
 
