@@ -3,7 +3,7 @@ Earthquake alert module for Spain (EMSC FDSN feed).
 
 Configuration via environment variables:
   TERREMOTO_EMSC_URL       — FDSN endpoint (default: seismicportal.eu)
-  TERREMOTO_MIN_MAGNITUDE  — minimum magnitude to alert (default: 2.5)
+  TERREMOTO_MIN_MAGNITUDE  — minimum magnitude to alert (default: 4.5)
   TERREMOTO_POLL_SECONDS   — polling interval in seconds (default: 300)
   TERREMOTO_MINLAT/MAXLAT/MINLON/MAXLON — bounding box (default: Spain + islands)
 """
@@ -21,7 +21,7 @@ EMSC_URL = os.environ.get(
     "TERREMOTO_EMSC_URL",
     "https://www.seismicportal.eu/fdsnws/event/1/query",
 )
-MIN_MAGNITUDE = float(os.environ.get("TERREMOTO_MIN_MAGNITUDE", "2.5"))
+MIN_MAGNITUDE = float(os.environ.get("TERREMOTO_MIN_MAGNITUDE", "4.5"))
 POLL_SECONDS = int(os.environ.get("TERREMOTO_POLL_SECONDS", "300"))
 
 BBOX = {
