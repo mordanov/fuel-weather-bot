@@ -3,12 +3,18 @@ PostgreSQL persistence for fuel price history and per-user settings.
 """
 
 import json
+import logging
 import os
+from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
 
+logger = logging.getLogger(__name__)
+
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
+# Optional JSON file path for earthquake seen-IDs backup (persists across DB wipes).
+_EARTHQUAKE_CACHE_FILE = os.environ.get("EARTHQUAKE_CACHE_FILE", "")
 
 _DEFAULT_PROVINCE = os.environ.get("PROVINCE_CODE", "29")
 _DEFAULT_MUNICIPIO = os.environ.get("MUNICIPIO_NAME", "")
@@ -216,11 +222,42 @@ def get_all_users() -> list:
             return [dict(r) for r in cur.fetchall()]
 
 
+def is_earthquake_cache_empty() -> bool:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM earthquake_seen_events")
+            return cur.fetchone()[0] == 0
+
+
+def _load_disk_earthquake_cache() -> set:
+    if not _EARTHQUAKE_CACHE_FILE:
+        return set()
+    try:
+        p = Path(_EARTHQUAKE_CACHE_FILE)
+        if p.exists():
+            return set(json.loads(p.read_text()))
+    except Exception as e:
+        logger.warning("Failed to read earthquake disk cache: %s", e)
+    return set()
+
+
+def _save_disk_earthquake_cache(event_ids: set):
+    if not _EARTHQUAKE_CACHE_FILE:
+        return
+    try:
+        p = Path(_EARTHQUAKE_CACHE_FILE)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps(list(event_ids)))
+    except Exception as e:
+        logger.warning("Failed to write earthquake disk cache: %s", e)
+
+
 def get_seen_earthquake_ids() -> set:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT event_id FROM earthquake_seen_events")
-            return {row[0] for row in cur.fetchall()}
+            db_ids = {row[0] for row in cur.fetchall()}
+    return db_ids | _load_disk_earthquake_cache()
 
 
 def mark_earthquakes_seen(event_ids: list):
@@ -234,3 +271,6 @@ def mark_earthquakes_seen(event_ids: list):
                 [(eid,) for eid in event_ids],
             )
         conn.commit()
+    # Keep disk cache in sync
+    existing = _load_disk_earthquake_cache()
+    _save_disk_earthquake_cache(existing | set(event_ids))

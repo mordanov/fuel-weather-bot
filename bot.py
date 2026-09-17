@@ -26,7 +26,7 @@ Optional:
 
 import logging
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import numpy as np
 from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -547,8 +547,29 @@ async def _post_init(app: Application) -> None:
     logger.info("Bot commands registered (%d)", len(_BOT_COMMANDS))
 
 
+def _seed_earthquake_cache_if_empty():
+    """On first deploy (empty DB table), pre-mark last 2 days as seen so we don't flood users."""
+    if not db.is_earthquake_cache_empty():
+        return
+    # Try disk cache first (survives DB wipes)
+    disk_ids = db._load_disk_earthquake_cache()
+    if disk_ids:
+        db.mark_earthquakes_seen(list(disk_ids))
+        logger.info("Earthquake cache seeded from disk (%d events)", len(disk_ids))
+        return
+    try:
+        starttime = (datetime.utcnow() - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S")
+        recent = terremoto.fetch_recent_quakes(starttime=starttime)
+        ids = [q["id"] for q in recent]
+        db.mark_earthquakes_seen(ids)
+        logger.info("Earthquake cache pre-seeded with %d events (no alerts sent)", len(ids))
+    except Exception as e:
+        logger.error("Failed to seed earthquake cache: %s", e)
+
+
 def main():
     db.init_schema()
+    _seed_earthquake_cache_if_empty()
 
     app: Application = (
         ApplicationBuilder()

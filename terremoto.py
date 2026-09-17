@@ -69,7 +69,7 @@ def reverse_geocode(lat: float, lon: float) -> str | None:
         return None
 
 
-def fetch_recent_quakes() -> list:
+def fetch_recent_quakes(starttime: str | None = None) -> list:
     params = {
         "format": "json",
         "minmag": MIN_MAGNITUDE,
@@ -77,6 +77,8 @@ def fetch_recent_quakes() -> list:
         "limit": 50,
         **BBOX,
     }
+    if starttime:
+        params["starttime"] = starttime
     resp = requests.get(EMSC_URL, params=params, timeout=20)
     resp.raise_for_status()
     return resp.json().get("features", [])
