@@ -46,6 +46,184 @@ def _wind_direction_label(degrees: float) -> str:
     return _WIND_DIRS[round(degrees / 45) % 8]
 
 
+_UV_THRESHOLDS = [
+    (3, "Low", "Bajo", "Низкий"),
+    (6, "Moderate", "Moderado", "Умеренный"),
+    (8, "High", "Alto", "Высокий"),
+    (11, "Very High", "Muy alto", "Очень высокий"),
+    (999, "Extreme", "Extremo", "Экстремальный"),
+]
+_UV_LANG_IDX = {"en": 1, "es": 2, "ru": 3}
+
+_WMO_ICON = {
+    0: "☀️", 1: "☀️", 2: "⛅", 3: "☁️",
+    45: "🌫", 48: "🌫",
+    51: "🌦", 53: "🌦", 55: "🌧",
+    61: "🌦", 63: "🌧", 65: "🌧",
+    71: "🌨", 73: "🌨", 75: "🌨",
+    80: "🌦", 81: "🌧", 82: "⛈",
+    95: "⛈", 96: "⛈", 99: "⛈",
+}
+
+
+def _uv_label(uv: float | None, lang: str) -> str:
+    if uv is None:
+        return "n/a"
+    li = _UV_LANG_IDX.get(lang, 1)
+    for threshold, *labels in _UV_THRESHOLDS:
+        if uv < threshold:
+            return f"{uv:.0f}  ({labels[li - 1]})"
+    return f"{uv:.0f}"
+
+
+def fetch_daily_forecast(lat: float, lon: float) -> dict:
+    """Fetch today's daily forecast (air + marine). Returns a flat dict of today's values."""
+    air_resp = requests.get(
+        _AIR_URL,
+        params={
+            "latitude": lat,
+            "longitude": lon,
+            "daily": (
+                "temperature_2m_max,temperature_2m_min,apparent_temperature_max,"
+                "precipitation_sum,precipitation_probability_max,"
+                "wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,"
+                "uv_index_max,sunrise,sunset,weather_code"
+            ),
+            "wind_speed_unit": "kmh",
+            "timezone": "auto",
+        },
+        timeout=15,
+    )
+    air_resp.raise_for_status()
+    d = air_resp.json().get("daily", {})
+
+    def _v(key):
+        vals = d.get(key, [])
+        return vals[0] if vals else None
+
+    result = {
+        "temp_max": _v("temperature_2m_max"),
+        "temp_min": _v("temperature_2m_min"),
+        "feels_max": _v("apparent_temperature_max"),
+        "precip_mm": _v("precipitation_sum"),
+        "precip_prob": _v("precipitation_probability_max"),
+        "wind_max": _v("wind_speed_10m_max"),
+        "gusts_max": _v("wind_gusts_10m_max"),
+        "wind_dir": _v("wind_direction_10m_dominant"),
+        "uv_max": _v("uv_index_max"),
+        "sunrise": _v("sunrise"),
+        "sunset": _v("sunset"),
+        "weather_code": _v("weather_code"),
+        "wave_height_max": None,
+    }
+
+    try:
+        marine_resp = requests.get(
+            _MARINE_URL,
+            params={
+                "latitude": lat,
+                "longitude": lon,
+                "daily": "wave_height_max",
+                "timezone": "auto",
+            },
+            timeout=15,
+        )
+        marine_resp.raise_for_status()
+        wh = marine_resp.json().get("daily", {}).get("wave_height_max", [])
+        result["wave_height_max"] = wh[0] if wh else None
+    except Exception:
+        pass
+
+    return result
+
+
+def format_daily_forecast_message(forecast: dict, lang: str = "en") -> str:
+    from i18n import t
+
+    codes = WMO_CODES.get(lang, WMO_CODES["en"])
+    condition = codes.get(forecast.get("weather_code"), "")
+
+    def _temp(v):
+        return f"{v:.0f}°C" if v is not None else "n/a"
+
+    def _time(ts):
+        return ts[11:16] if ts and len(ts) >= 16 else (ts or "n/a")
+
+    wind_parts = []
+    if forecast.get("wind_max") is not None:
+        wind_parts.append(f"max {forecast['wind_max']:.0f} km/h")
+    if forecast.get("gusts_max") is not None:
+        wind_parts.append(f"gusts {forecast['gusts_max']:.0f} km/h")
+    if forecast.get("wind_dir") is not None:
+        wind_parts.append(_wind_direction_label(forecast["wind_dir"]))
+    wind_str = "  ".join(wind_parts) or "n/a"
+
+    rain_parts = []
+    if forecast.get("precip_prob") is not None:
+        rain_parts.append(f"{forecast['precip_prob']:.0f}%")
+    if forecast.get("precip_mm") is not None:
+        rain_parts.append(f"{forecast['precip_mm']:.1f} mm")
+    rain_str = "  /  ".join(rain_parts) or "n/a"
+
+    lines = [t(lang, "daily_forecast_header"), ""]
+    if condition:
+        lines += [f"☁️  {condition}", ""]
+    lines += [
+        f"🌡  {t(lang, 'daily_temp')}:  {_temp(forecast.get('temp_min'))}–{_temp(forecast.get('temp_max'))}  (feels up to {_temp(forecast.get('feels_max'))})",
+        f"🌧  {t(lang, 'daily_rain')}:   {rain_str}",
+        f"🌬  {t(lang, 'daily_wind')}:   {wind_str}",
+        f"☀️  {t(lang, 'daily_uv')}:     {_uv_label(forecast.get('uv_max'), lang)}",
+        f"🌅  {t(lang, 'daily_sunrise')}: {_time(forecast.get('sunrise'))}  ·  {t(lang, 'daily_sunset')}: {_time(forecast.get('sunset'))}",
+    ]
+    if forecast.get("wave_height_max") is not None:
+        lines.append(f"🌊  {t(lang, 'daily_waves')}:  max {forecast['wave_height_max']:.1f} m")
+    return "\n".join(lines)
+
+
+def fetch_hourly_forecast(lat: float, lon: float) -> list:
+    """Fetch today's hourly forecast. Returns list of 24 dicts (local timezone)."""
+    resp = requests.get(
+        _AIR_URL,
+        params={
+            "latitude": lat,
+            "longitude": lon,
+            "hourly": "temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m",
+            "wind_speed_unit": "kmh",
+            "timezone": "auto",
+            "forecast_days": 1,
+        },
+        timeout=15,
+    )
+    resp.raise_for_status()
+    h = resp.json().get("hourly", {})
+    times = h.get("time", [])
+    return [
+        {
+            "time": times[i][11:16],
+            "temp": h["temperature_2m"][i],
+            "precip_prob": h["precipitation_probability"][i],
+            "weather_code": h["weather_code"][i],
+            "wind_speed": h["wind_speed_10m"][i],
+            "wind_dir": h["wind_direction_10m"][i],
+        }
+        for i in range(len(times))
+    ]
+
+
+def format_hourly_forecast_message(hours: list, lang: str = "en") -> str:
+    from i18n import t
+
+    lines = [t(lang, "hourly_forecast_header"), ""]
+    for h in hours:
+        icon = _WMO_ICON.get(h["weather_code"], "❓")
+        temp = f"{h['temp']:.0f}°" if h["temp"] is not None else "?°"
+        prob = f"{h['precip_prob']:.0f}%" if h["precip_prob"] is not None else "?"
+        wind = f"{h['wind_speed']:.0f}" if h["wind_speed"] is not None else "?"
+        wdir = _wind_direction_label(h["wind_dir"]) if h["wind_dir"] is not None else ""
+        lines.append(f"{h['time']}  {temp:>4}  {icon}  💧{prob:>3}  💨{wind:>3} {wdir}")
+    return "\n".join(lines)
+
+
 def fetch_weather(lat: float, lon: float) -> dict:
     """Fetch current air and sea conditions. Returns a dict with all fields."""
     air_resp = requests.get(

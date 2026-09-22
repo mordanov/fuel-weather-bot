@@ -37,6 +37,7 @@ import terremoto
 _BOT_COMMANDS = [
     BotCommand("check",       "Current fuel prices"),
     BotCommand("weather",     "Air conditions"),
+    BotCommand("hourly_forecast", "Hourly weather forecast for today"),
     BotCommand("sea",         "Sea temperature & waves"),
     BotCommand("air",         "Air quality index"),
     BotCommand("pollen",      "Pollen levels"),

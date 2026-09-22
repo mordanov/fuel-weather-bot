@@ -203,16 +203,8 @@ def _price_chart(snapshots: list, scope: str) -> BytesIO | None:
     return buf
 
 
-async def cmd_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    user = db.get_or_create_user(chat_id)
-    lang = user.get("language", "en")
-    snapshots = db.get_snapshots(user["province_code"], user["municipio_name"], days=60)
-
-    if not snapshots:
-        await update.message.reply_text(i18n.t(lang, "no_history"))
-        return
-
+def build_statistics(snapshots: list, scope: str, lang: str) -> tuple:
+    """Build statistics text and price chart from snapshots. Returns (text, chart_or_None)."""
     today = date.today()
     cur_month = today.month
     cur_year = today.year
@@ -247,9 +239,7 @@ async def cmd_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
     week_g95 = week_ago_snap["avg_gasoline_95"] if week_ago_snap else None
     week_diesel = week_ago_snap["avg_diesel"] if week_ago_snap else None
 
-    scope = user["municipio_name"] or f"province {user['province_code']}"
     lines = [i18n.t(lang, "stats_header", scope=scope), ""]
-
     lines.append(i18n.t(lang, "gasoline_95") + ":")
     lines.append(i18n.t(lang, "stats_latest", val=fmt(latest_g95)))
     lines.append(i18n.t(lang, "stats_week_ago", val=fmt(week_g95), trend=price_trend(latest_g95, week_g95)))
@@ -264,8 +254,21 @@ async def cmd_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines.append("")
     lines.append(i18n.t(lang, "stats_footer", n=len(snapshots)))
 
-    stats_text = "\n".join(lines)
-    chart = _price_chart(snapshots, scope)
+    return "\n".join(lines), _price_chart(snapshots, scope)
+
+
+async def cmd_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    user = db.get_or_create_user(chat_id)
+    lang = user.get("language", "en")
+    snapshots = db.get_snapshots(user["province_code"], user["municipio_name"], days=60)
+
+    if not snapshots:
+        await update.message.reply_text(i18n.t(lang, "no_history"))
+        return
+
+    scope = user["municipio_name"] or f"province {user['province_code']}"
+    stats_text, chart = build_statistics(snapshots, scope, lang)
 
     if chart:
         caption = stats_text if len(stats_text) <= 1024 else None

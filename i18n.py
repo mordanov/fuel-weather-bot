@@ -118,6 +118,16 @@ _T = {
         "timezone_usage": "Usage: /timezone <offset>\nExamples: /timezone +2  /timezone -3  /timezone 0\nValid range: -12 to +14",
         "timezone_set": "Timezone set to UTC{offset}.",
         "timezone_invalid": "Invalid timezone. Use a number like +2, -3 or 0. Range: -12 to +14.",
+        # daily weather forecast
+        "daily_forecast_header": "Weather today",
+        "daily_temp": "Temperature",
+        "daily_rain": "Rain",
+        "daily_wind": "Wind",
+        "daily_uv": "UV",
+        "daily_sunrise": "Sunrise",
+        "daily_sunset": "Sunset",
+        "daily_waves": "Waves",
+        "hourly_forecast_header": "⏰ Hourly forecast",
     },
     "es": {
         "welcome": (
@@ -232,6 +242,16 @@ _T = {
         "timezone_usage": "Uso: /timezone <desfase>\nEjemplos: /timezone +2  /timezone -3  /timezone 0\nRango válido: -12 a +14",
         "timezone_set": "Zona horaria establecida en UTC{offset}.",
         "timezone_invalid": "Zona horaria no válida. Usa un número como +2, -3 o 0. Rango: -12 a +14.",
+        # daily weather forecast
+        "daily_forecast_header": "Tiempo hoy",
+        "daily_temp": "Temperatura",
+        "daily_rain": "Lluvia",
+        "daily_wind": "Viento",
+        "daily_uv": "UV",
+        "daily_sunrise": "Amanecer",
+        "daily_sunset": "Atardecer",
+        "daily_waves": "Oleaje",
+        "hourly_forecast_header": "⏰ Previsión horaria",
     },
     "ru": {
         "welcome": (
@@ -346,6 +366,16 @@ _T = {
         "timezone_usage": "Использование: /timezone <смещение>\nПримеры: /timezone +2  /timezone -3  /timezone 0\nДопустимый диапазон: от -12 до +14",
         "timezone_set": "Часовой пояс установлен: UTC{offset}.",
         "timezone_invalid": "Неверный часовой пояс. Введите число, например +2, -3 или 0. Диапазон: от -12 до +14.",
+        # daily weather forecast
+        "daily_forecast_header": "Погода сегодня",
+        "daily_temp": "Температура",
+        "daily_rain": "Дождь",
+        "daily_wind": "Ветер",
+        "daily_uv": "УФ",
+        "daily_sunrise": "Восход",
+        "daily_sunset": "Закат",
+        "daily_waves": "Волны",
+        "hourly_forecast_header": "⏰ Почасовой прогноз",
     },
 }
 

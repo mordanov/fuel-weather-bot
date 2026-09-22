@@ -411,6 +411,19 @@ async def cmd_parking(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(_format_parking(result, lang), parse_mode=ParseMode.HTML)
 
 
+async def cmd_hourly_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    user = db.get_or_create_user(chat_id)
+    lang = user.get("language", "en")
+    loc = _user_location(user)
+    try:
+        import weather_api
+        hours = weather_api.fetch_hourly_forecast(loc.lat, loc.lon)
+        await update.message.reply_text(weather_api.format_hourly_forecast_message(hours, lang))
+    except Exception as e:
+        await update.message.reply_text(i18n.t(lang, "weather_error", e=e))
+
+
 async def cmd_around(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Fetch all providers concurrently and reply with a combined summary."""
     chat_id = update.effective_chat.id
@@ -450,3 +463,4 @@ def register_handlers(app: Application) -> None:
     app.add_handler(CommandHandler("parking", cmd_parking))
     app.add_handler(CommandHandler("location", cmd_location))
     app.add_handler(CommandHandler("around", cmd_around))
+    app.add_handler(CommandHandler("hourly_forecast", cmd_hourly_forecast))

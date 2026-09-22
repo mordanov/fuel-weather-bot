@@ -44,7 +44,7 @@ def reschedule_user(app: Application, user: dict):
 
 
 async def _user_daily_job(context: ContextTypes.DEFAULT_TYPE):
-    from handlers.fuel_commands import fetch_and_save
+    from handlers.fuel_commands import fetch_and_save, build_statistics
     import i18n
 
     chat_id = context.job.data
@@ -53,6 +53,7 @@ async def _user_daily_job(context: ContextTypes.DEFAULT_TYPE):
         return
     lang = user.get("language", "en")
 
+    # Message 1: current fuel prices
     try:
         data, summary = await fetch_and_save(user["province_code"], user["municipio_name"])
     except Exception as e:
@@ -77,13 +78,30 @@ async def _user_daily_job(context: ContextTypes.DEFAULT_TYPE):
         logger.error("Failed to send daily fuel message to %s: %s", chat_id, e)
         return
 
+    # Message 2: fuel price statistics + chart
+    try:
+        snapshots = db.get_snapshots(user["province_code"], user["municipio_name"], days=60)
+        if snapshots:
+            scope = user["municipio_name"] or f"province {user['province_code']}"
+            stats_text, chart = build_statistics(snapshots, scope, lang)
+            if chart:
+                caption = stats_text if len(stats_text) <= 1024 else None
+                await context.bot.send_photo(chat_id=chat_id, photo=chart, caption=caption)
+                if caption is None:
+                    await context.bot.send_message(chat_id=chat_id, text=stats_text)
+            else:
+                await context.bot.send_message(chat_id=chat_id, text=stats_text)
+    except Exception as e:
+        logger.error("Failed to send daily statistics to %s: %s", chat_id, e)
+
+    # Message 3: daily weather forecast
     lat = user["home_lat"] if user["home_lat"] is not None else DEFAULT_LAT
     lon = user["home_lon"] if user["home_lon"] is not None else DEFAULT_LON
     try:
-        weather = weather_api.fetch_weather(lat, lon)
+        forecast = weather_api.fetch_daily_forecast(lat, lon)
         await context.bot.send_message(
             chat_id=chat_id,
-            text=weather_api.format_weather_message(weather, lat, lon, lang=lang),
+            text=weather_api.format_daily_forecast_message(forecast, lang=lang),
         )
     except Exception as e:
-        logger.error("Failed to send daily weather to %s: %s", chat_id, e)
+        logger.error("Failed to send daily weather forecast to %s: %s", chat_id, e)
