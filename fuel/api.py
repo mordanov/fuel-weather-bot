@@ -1,0 +1,213 @@
+"""
+Fuel price API helpers — Spain's Ministerio para la Transicion Ecologica feed.
+"""
+
+import unicodedata
+from math import radians, sin, cos, sqrt, atan2
+
+import requests
+
+from .providers import CompositeFuelProvider, ProviderConfig, _normalize
+
+_provider = CompositeFuelProvider(ProviderConfig.from_env())
+
+
+PROVINCE_CODES = {
+    "ALAVA": "01", "ARABA": "01",
+    "ALBACETE": "02",
+    "ALICANTE": "03", "ALACANT": "03",
+    "ALMERIA": "04", "ALMERÍA": "04",
+    "AVILA": "05", "ÁVILA": "05",
+    "BADAJOZ": "06",
+    "BALEARES": "07", "ILLES BALEARS": "07", "ISLAS BALEARES": "07", "MALLORCA": "07",
+    "BARCELONA": "08",
+    "BURGOS": "09",
+    "CACERES": "10", "CÁCERES": "10",
+    "CADIZ": "11", "CÁDIZ": "11",
+    "CASTELLON": "12", "CASTELLÓ": "12", "CASTELLÓN": "12",
+    "CIUDAD REAL": "13",
+    "CORDOBA": "14", "CÓRDOBA": "14",
+    "A CORUNA": "15", "LA CORUNA": "15", "LA CORUÑA": "15", "CORUÑA": "15", "A CORUÑA": "15",
+    "CUENCA": "16",
+    "GIRONA": "17", "GERONA": "17",
+    "GRANADA": "18",
+    "GUADALAJARA": "19",
+    "GIPUZKOA": "20", "GUIPUZCOA": "20", "GUIPÚZCOA": "20",
+    "HUELVA": "21",
+    "HUESCA": "22",
+    "JAEN": "23", "JAÉN": "23",
+    "LEON": "24", "LEÓN": "24",
+    "LLEIDA": "25", "LERIDA": "25", "LÉRIDA": "25",
+    "LA RIOJA": "26", "RIOJA": "26",
+    "LUGO": "27",
+    "MADRID": "28",
+    "MALAGA": "29", "MÁLAGA": "29",
+    "MURCIA": "30",
+    "NAVARRA": "31", "NAVARRE": "31",
+    "OURENSE": "32", "ORENSE": "32",
+    "ASTURIAS": "33", "OVIEDO": "33",
+    "PALENCIA": "34",
+    "LAS PALMAS": "35", "GRAN CANARIA": "35",
+    "PONTEVEDRA": "36",
+    "SALAMANCA": "37",
+    "SANTA CRUZ DE TENERIFE": "38", "TENERIFE": "38",
+    "CANTABRIA": "39", "SANTANDER": "39",
+    "SEGOVIA": "40",
+    "SEVILLA": "41", "SEVILLE": "41",
+    "SORIA": "42",
+    "TARRAGONA": "43",
+    "TERUEL": "44",
+    "TOLEDO": "45",
+    "VALENCIA": "46", "VALÈNCIA": "46",
+    "VALLADOLID": "47",
+    "BIZKAIA": "48", "VIZCAYA": "48",
+    "ZAMORA": "49",
+    "ZARAGOZA": "50",
+    "CEUTA": "51",
+    "MELILLA": "52",
+}
+
+
+def find_province_code(name: str) -> str:
+    """Return the INE province code for a given province name, or raise ValueError."""
+    key = _normalize(name)
+    code = PROVINCE_CODES.get(key)
+    if code:
+        return code
+    for prov_name, prov_code in PROVINCE_CODES.items():
+        if key in prov_name or prov_name in key:
+            return prov_code
+    raise ValueError(f"Province '{name}' not found.")
+
+
+def get_municipio_id(province_code: str, municipio_name: str) -> str:
+    """Look up the Ministry's internal municipality ID by name."""
+    return _provider.get_municipio_id(province_code, municipio_name)
+
+
+def fetch_stations(province_code: str, municipio_name: str = "") -> dict:
+    """Fetch current station list + prices for the given province/municipality."""
+    return _provider.fetch(province_code, municipio_name)
+
+
+def summarize(data: dict) -> dict:
+    fuels = {"Gasoline 95": "gasoline_95", "Diesel": "diesel"}
+    summary = {"date": data["date"], "station_count": len(data["stations"]), "fuels": {}}
+
+    for label, field in fuels.items():
+        prices = []
+        cheapest = None
+        for st in data["stations"]:
+            price = st[field]
+            if price is None:
+                continue
+            prices.append(price)
+            if cheapest is None or price < cheapest["price"]:
+                cheapest = {"price": price, **st}
+        summary["fuels"][label] = {
+            "avg": sum(prices) / len(prices) if prices else None,
+            "cheapest": cheapest,
+        }
+    return summary
+
+
+def haversine_km(lat1, lon1, lat2, lon2) -> float:
+    r = 6371.0
+    dlat, dlon = radians(lat2 - lat1), radians(lon2 - lon1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+    return 2 * r * atan2(sqrt(a), sqrt(1 - a))
+
+
+def geocode_address(address: str, api_key: str):
+    """Convert a home address to (lat, lon) using Google's Geocoding API."""
+    resp = requests.get(
+        "https://maps.googleapis.com/maps/api/geocode/json",
+        params={"address": address, "key": api_key},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    payload = resp.json()
+    if payload.get("status") != "OK" or not payload.get("results"):
+        return None
+    loc = payload["results"][0]["geometry"]["location"]
+    return loc["lat"], loc["lng"]
+
+
+def find_nearest_station(stations, home_lat, home_lon):
+    best = None
+    for st in stations:
+        if st["lat"] is None or st["lon"] is None:
+            continue
+        dist = haversine_km(home_lat, home_lon, st["lat"], st["lon"])
+        if best is None or dist < best["distance_km"]:
+            best = {**st, "distance_km": dist}
+    return best
+
+
+def predict_next_price(pairs: list) -> float:
+    """Linear extrapolation: pairs is [(x, y), ...], returns predicted y at x[-1]+1."""
+    import numpy as np
+    xs = np.array([p[0] for p in pairs], dtype=float)
+    ys = np.array([p[1] for p in pairs], dtype=float)
+    coeffs = np.polyfit(xs, ys, 1)
+    return float(np.polyval(coeffs, xs[-1] + 1))
+
+
+def _maps_link(station: dict) -> str:
+    if station.get("lat") and station.get("lon"):
+        return f"https://maps.google.com/?q={station['lat']},{station['lon']}"
+    query = f"{station.get('address', '')} {station.get('town', '')}".strip()
+    if query:
+        import urllib.parse
+        return f"https://maps.google.com/?q={urllib.parse.quote(query)}"
+    return ""
+
+
+def format_message(
+    summary: dict,
+    nearest: dict = None,
+    municipio_name: str = "",
+    province_code: str = "29",
+    lang: str = "en",
+) -> str:
+    from i18n import t
+
+    scope = municipio_name if municipio_name else f"province {province_code}"
+    lines = [t(lang, "fuel_header", scope=scope, date=summary["date"]), ""]
+
+    fuel_labels = {
+        "Gasoline 95": t(lang, "gasoline_95"),
+        "Diesel": t(lang, "diesel"),
+    }
+
+    for key, label in fuel_labels.items():
+        info = summary["fuels"].get(key, {})
+        if info.get("avg") is not None:
+            lines.append(t(lang, "fuel_avg", label=label, price=f"{info['avg']:.3f}"))
+    lines.append("")
+
+    for key, label in fuel_labels.items():
+        info = summary["fuels"].get(key, {})
+        c = info.get("cheapest")
+        if c:
+            lines.append(t(lang, "cheapest", label=label, price=f"{c['price']:.3f}", name=c["name"]))
+            if c["address"]:
+                link = _maps_link(c)
+                addr = f"{c['address']}, {c['town']}"
+                lines.append(f"  {addr}" + (f"\n  {link}" if link else ""))
+
+    if nearest:
+        lines.append("")
+        lines.append(t(lang, "nearest_header", name=nearest["name"], dist=nearest["distance_km"]))
+        if nearest["address"]:
+            link = _maps_link(nearest)
+            addr = f"{nearest['address']}, {nearest['town']}"
+            lines.append(f"  {addr}" + (f"\n  {link}" if link else ""))
+        if nearest["gasoline_95"] is not None:
+            lines.append(f"  {t(lang, 'gasoline_95')}: {nearest['gasoline_95']:.3f} €/L")
+        if nearest["diesel"] is not None:
+            lines.append(f"  {t(lang, 'diesel')}: {nearest['diesel']:.3f} €/L")
+
+    lines.append("")
+    lines.append(t(lang, "stations_reporting", n=summary["station_count"]))
+    return "\n".join(lines)
