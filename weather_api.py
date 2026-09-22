@@ -11,7 +11,7 @@ _MARINE_URL = "https://marine-api.open-meteo.com/v1/marine"
 
 _WIND_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
-_WMO_CODES = {
+WMO_CODES = {
     "en": {
         0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
         45: "Fog", 48: "Icy fog",
@@ -94,7 +94,7 @@ def format_weather_message(weather: dict, lat: float, lon: float, lang: str = "e
     def fmt_float(val, unit):
         return f"{val:.1f} {unit}" if val is not None else "n/a"
 
-    codes = _WMO_CODES.get(lang, _WMO_CODES["en"])
+    codes = WMO_CODES.get(lang, WMO_CODES["en"])
     condition = codes.get(weather.get("weather_code"), "Unknown")
 
     wind_label = ""

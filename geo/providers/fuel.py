@@ -24,7 +24,7 @@ class FuelProvider(GeoDataProvider):
     cache_ttl = 1800  # 30 min — fuel prices change at most once per day
 
     def __init__(self, province_code: str, municipio_name: str = "") -> None:
-        from fuel_providers import CompositeFuelProvider, ProviderConfig
+        from fuel.providers import CompositeFuelProvider, ProviderConfig
         self._inner = CompositeFuelProvider(ProviderConfig.from_env())
         self._province_code = province_code
         self._municipio_name = municipio_name

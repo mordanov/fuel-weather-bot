@@ -361,7 +361,7 @@ class TestFuelProvider:
             "stations": [{"name": "REPSOL", "gasoline_95": 1.65, "diesel": 1.49,
                            "address": "", "town": "", "postal_code": "", "lat": None, "lon": None}],
         }
-        with patch("fuel_providers.CompositeFuelProvider") as MockComposite:
+        with patch("fuel.providers.CompositeFuelProvider") as MockComposite:
             instance = MockComposite.return_value
             instance.fetch.return_value = mock_data
             provider = FuelProvider("29", "MALAGA")
@@ -371,7 +371,7 @@ class TestFuelProvider:
 
     @pytest.mark.asyncio
     async def test_exception_returns_failure(self):
-        with patch("fuel_providers.CompositeFuelProvider") as MockComposite:
+        with patch("fuel.providers.CompositeFuelProvider") as MockComposite:
             instance = MockComposite.return_value
             instance.fetch.side_effect = RuntimeError("all providers failed")
             provider = FuelProvider("29", "MALAGA")

@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from fuel_providers import (
+from fuel.providers import (
     CompositeFuelProvider,
     OfficialCsvProvider,
     OfficialMirrorProvider,
