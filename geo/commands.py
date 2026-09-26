@@ -418,8 +418,11 @@ async def cmd_hourly_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE
     loc = _user_location(user)
     try:
         import weather_api
-        hours = weather_api.fetch_hourly_forecast(loc.lat, loc.lon)
-        await update.message.reply_text(weather_api.format_hourly_forecast_message(hours, lang))
+        hours, highlight = weather_api.fetch_hourly_forecast(loc.lat, loc.lon)
+        await update.message.reply_text(
+            weather_api.format_hourly_forecast_message(hours, lang, highlight),
+            parse_mode=ParseMode.HTML,
+        )
     except Exception as e:
         await update.message.reply_text(i18n.t(lang, "weather_error", e=e))
 

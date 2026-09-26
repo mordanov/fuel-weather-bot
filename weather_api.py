@@ -4,6 +4,9 @@ Air temperature: api.open-meteo.com
 Sea temperature:  marine-api.open-meteo.com
 """
 
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
 import requests
 
 _AIR_URL = "https://api.open-meteo.com/v1/forecast"
@@ -180,8 +183,8 @@ def format_daily_forecast_message(forecast: dict, lang: str = "en") -> str:
     return "\n".join(lines)
 
 
-def fetch_hourly_forecast(lat: float, lon: float) -> list:
-    """Fetch today's hourly forecast. Returns list of 24 dicts (local timezone)."""
+def fetch_hourly_forecast(lat: float, lon: float) -> tuple[list, str]:
+    """Fetch hourly forecast: 4h before now to 20h after now. Returns (hours, highlight_time)."""
     resp = requests.get(
         _AIR_URL,
         params={
@@ -190,27 +193,40 @@ def fetch_hourly_forecast(lat: float, lon: float) -> list:
             "hourly": "temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m",
             "wind_speed_unit": "kmh",
             "timezone": "auto",
-            "forecast_days": 1,
+            "forecast_days": 2,
         },
         timeout=15,
     )
     resp.raise_for_status()
-    h = resp.json().get("hourly", {})
+    data = resp.json()
+    h = data.get("hourly", {})
+    tz = ZoneInfo(data.get("timezone", "UTC"))
+    now = datetime.now(tz)
+
+    # Round to nearest hour: <30min → current hour, >=30min → next hour
+    highlight_hour = now.hour if now.minute < 30 else (now.hour + 1) % 24
+    highlight_time = f"{highlight_hour:02d}:00"
+
+    start = now - timedelta(hours=4)
+    end = now + timedelta(hours=20)
+
     times = h.get("time", [])
-    return [
-        {
-            "time": times[i][11:16],
-            "temp": h["temperature_2m"][i],
-            "precip_prob": h["precipitation_probability"][i],
-            "weather_code": h["weather_code"][i],
-            "wind_speed": h["wind_speed_10m"][i],
-            "wind_dir": h["wind_direction_10m"][i],
-        }
-        for i in range(len(times))
-    ]
+    result = []
+    for i, t_str in enumerate(times):
+        t_local = datetime.fromisoformat(t_str).replace(tzinfo=tz)
+        if start <= t_local <= end:
+            result.append({
+                "time": t_str[11:16],
+                "temp": h["temperature_2m"][i],
+                "precip_prob": h["precipitation_probability"][i],
+                "weather_code": h["weather_code"][i],
+                "wind_speed": h["wind_speed_10m"][i],
+                "wind_dir": h["wind_direction_10m"][i],
+            })
+    return result, highlight_time
 
 
-def format_hourly_forecast_message(hours: list, lang: str = "en") -> str:
+def format_hourly_forecast_message(hours: list, lang: str = "en", highlight_time: str | None = None) -> str:
     from i18n import t
 
     lines = [t(lang, "hourly_forecast_header"), ""]
@@ -220,7 +236,10 @@ def format_hourly_forecast_message(hours: list, lang: str = "en") -> str:
         prob = f"{h['precip_prob']:.0f}%" if h["precip_prob"] is not None else "?"
         wind = f"{h['wind_speed']:.0f}" if h["wind_speed"] is not None else "?"
         wdir = _wind_direction_label(h["wind_dir"]) if h["wind_dir"] is not None else ""
-        lines.append(f"{h['time']}  {temp:>4}  {icon}  💧{prob:>3}  💨{wind:>3} {wdir}")
+        line = f"{h['time']}  {temp:>4}  {icon}  💧{prob:>3}  💨{wind:>3} {wdir}"
+        if highlight_time and h["time"] == highlight_time:
+            line = f"<b>{line}</b>"
+        lines.append(line)
     return "\n".join(lines)
 
 
