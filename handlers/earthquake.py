@@ -3,7 +3,7 @@ Earthquake command handler and broadcast job.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -60,6 +60,14 @@ async def cmd_earthquake(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(msg, parse_mode="HTML", disable_web_page_preview=True)
 
 
+def _within_30_days(q: dict, cutoff: datetime) -> bool:
+    try:
+        t = datetime.fromisoformat(q["properties"]["time"].replace("Z", "+00:00"))
+        return t >= cutoff
+    except Exception:
+        return False
+
+
 async def earthquake_check_job(context: ContextTypes.DEFAULT_TYPE):
     try:
         quakes = terremoto.fetch_recent_quakes()
@@ -67,8 +75,12 @@ async def earthquake_check_job(context: ContextTypes.DEFAULT_TYPE):
         logger.error("Earthquake fetch failed: %s", e)
         return
 
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
     seen = db.get_seen_earthquake_ids()
-    new_quakes = [q for q in quakes if q["id"] not in seen]
+    new_quakes = [
+        q for q in quakes
+        if q["id"] not in seen and _within_30_days(q, cutoff)
+    ]
     new_quakes.reverse()
 
     if not new_quakes:
