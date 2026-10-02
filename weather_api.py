@@ -190,7 +190,7 @@ def fetch_hourly_forecast(lat: float, lon: float) -> tuple[list, str]:
         params={
             "latitude": lat,
             "longitude": lon,
-            "hourly": "temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m",
+            "hourly": "temperature_2m,precipitation_probability,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m",
             "wind_speed_unit": "kmh",
             "timezone": "auto",
             "forecast_days": 2,
@@ -219,6 +219,7 @@ def fetch_hourly_forecast(lat: float, lon: float) -> tuple[list, str]:
                 "time": t_str[11:16],
                 "temp": h["temperature_2m"][i],
                 "precip_prob": h["precipitation_probability"][i],
+                "humidity": h["relative_humidity_2m"][i],
                 "weather_code": h["weather_code"][i],
                 "wind_speed": h["wind_speed_10m"][i],
                 "wind_dir": h["wind_direction_10m"][i],
@@ -236,7 +237,8 @@ def format_hourly_forecast_message(hours: list, lang: str = "en", highlight_time
         prob = f"{h['precip_prob']:.0f}%" if h["precip_prob"] is not None else "?"
         wind = f"{h['wind_speed']:.0f}" if h["wind_speed"] is not None else "?"
         wdir = _wind_direction_label(h["wind_dir"]) if h["wind_dir"] is not None else ""
-        line = f"{h['time']}  {temp:>4}  {icon}  💧{prob:>3}  💨{wind:>3} {wdir}"
+        hum = f"{h['humidity']:.0f}%" if h.get("humidity") is not None else "?"
+        line = f"{h['time']}  {temp:>4}  {icon}  💧{prob:>3}  💦{hum:>3}  💨{wind:>3} {wdir}"
         if highlight_time and h["time"] == highlight_time:
             line = f"<b>{line}</b>"
         lines.append(line)

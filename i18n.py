@@ -63,6 +63,7 @@ _T = {
         "gasoline_95": "Gasoline 95",
         "diesel": "Diesel",
         "stations_reporting": "({n} stations reporting)",
+        "fuel_updated": "🕐 Updated: {date}",
         # statistics
         "stats_header": "📊 Price Statistics — {scope}",
         "stats_latest": "  Latest:         {val}",
@@ -190,6 +191,7 @@ _T = {
         "gasoline_95": "Gasolina 95",
         "diesel": "Diésel",
         "stations_reporting": "({n} estaciones reportando)",
+        "fuel_updated": "🕐 Actualizado: {date}",
         "stats_header": "📊 Estadísticas de precios — {scope}",
         "stats_latest": "  Último:          {val}",
         "stats_week_ago": "  Hace una semana: {val}{trend}",
@@ -314,6 +316,7 @@ _T = {
         "gasoline_95": "Бензин 95",
         "diesel": "Дизель",
         "stations_reporting": "({n} станций в отчёте)",
+        "fuel_updated": "🕐 Обновлено: {date}",
         "stats_header": "📊 Статистика цен — {scope}",
         "stats_latest": "  Последняя:       {val}",
         "stats_week_ago": "  Неделю назад:    {val}{trend}",

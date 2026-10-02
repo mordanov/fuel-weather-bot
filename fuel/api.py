@@ -210,4 +210,5 @@ def format_message(
 
     lines.append("")
     lines.append(t(lang, "stations_reporting", n=summary["station_count"]))
+    lines.append(t(lang, "fuel_updated", date=summary["date"]))
     return "\n".join(lines)
